@@ -1,18 +1,13 @@
 // Supabase Configuration
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
-export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
+export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || null
+export const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || null
 
-// Backend Configuration  
-export const API_URL = import.meta.env.VITE_API_URL
+// Backend Configuration (OPTIONAL)
+export const API_URL = import.meta.env.VITE_API_URL || null
 
 // Environment
 export const ENV = import.meta.env.VITE_ENV || 'development'
 
-// Validation
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error('Missing required Supabase environment variables')
-}
-
-if (!API_URL) {
-  throw new Error('Missing required API_URL environment variable')
-}
+// Safe flags
+export const IS_SUPABASE_READY = !!(SUPABASE_URL && SUPABASE_ANON_KEY)
+export const IS_API_READY = !!API_URL
