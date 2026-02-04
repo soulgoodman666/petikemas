@@ -49,6 +49,43 @@ export default function MyFiles() {
     }
   }, [user, authLoading, navigate]);
 
+  // Real-time subscription for file changes
+  useEffect(() => {
+    if (!user) return;
+
+    // Subscribe to changes in the files table
+    const subscription = supabase
+      .channel('files_changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'files'
+        }, 
+        (payload) => {
+          console.log('📁 Real-time file change:', payload);
+          
+          // Check if this change affects the current user
+          const file = payload.new || payload.old;
+          const affectsUser = file && (
+            file.target_user_id === user.id || 
+            file.uploaded_by === user.id || 
+            file.target_user_id === null // Public files
+          );
+          
+          if (affectsUser) {
+            console.log('🔄 Refetching files due to relevant change');
+            fetchAccessibleFiles();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user]);
+
   // Fetch announcements on component mount
   useEffect(() => {
     const fetchAnnouncements = async () => {

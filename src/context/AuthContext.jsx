@@ -192,14 +192,105 @@ export function AuthProvider({ children }) {
       });
 
       if (error) {
-        console.error("❌ Register error:", error);
-        throw new Error(error.message);
+        console.error("❌ Supabase auth error:", {
+          message: error.message,
+          status: error.status,
+          code: error.code
+        });
+
+        // Handle user already registered error
+        if (error.message?.includes("User already registered")) {
+          console.log("ℹ️ User already exists in auth, checking profile...");
+          
+          // Cek apakah user sudah ada di profiles
+          try {
+            const { data: existingProfile, error: profileError } = await supabase
+              .from("profiles")
+              .select("id, email, full_name")
+              .eq("email", email.toLowerCase())
+              .maybeSingle();
+
+            if (profileError) {
+              console.error("❌ Error checking existing profile:", profileError);
+              if (profileError.code === '406' || profileError.status === 406) {
+                throw new Error("Server tidak dapat memproses request. Silakan coba lagi.");
+              }
+              throw new Error("Gagal memeriksa profile user. Silakan hubungi admin.");
+            } else if (existingProfile) {
+              console.log("✅ User already has profile:", existingProfile);
+              throw new Error("User sudah terdaftar. Silakan login.");
+            } else {
+              console.log("ℹ️ User exists in auth but no profile found, creating profile...");
+              
+              // Buat profile untuk user yang sudah ada di auth
+              try {
+                // Get the user from auth to get the ID
+                const { data: authUser, error: signInError } = await supabase.auth.signInWithPassword({
+                  email: email.trim().toLowerCase(),
+                  password: password.trim(),
+                });
+
+                if (signInError) {
+                  console.error("❌ Error signing in to create profile:", signInError);
+                  if (signInError.code === '406' || signInError.status === 406) {
+                    throw new Error("Server tidak dapat memproses login. Silakan coba lagi.");
+                  }
+                  throw new Error("Gagal memverifikasi user. Password mungkin salah.");
+                }
+
+                if (authUser.user) {
+                  const { data: newProfile, error: createError } = await supabase
+                    .from("profiles")
+                    .insert([
+                      {
+                        id: authUser.user.id,
+                        email: email.toLowerCase(),
+                        full_name: fullName,
+                        role: HARDCODED_ADMINS.includes(email.toLowerCase()) ? 'admin' : 'user',
+                        created_at: new Date().toISOString()
+                      }
+                    ])
+                    .select()
+                    .single();
+
+                  if (createError) {
+                    console.error("❌ Failed to create profile for existing user:", createError);
+                    if (createError.code === '406' || createError.status === 406) {
+                      throw new Error("Server tidak dapat membuat profile. Silakan coba lagi.");
+                    }
+                    throw new Error("Gagal membuat profile. Silakan hubungi admin.");
+                  }
+
+                  console.log("✅ Profile created for existing user:", newProfile);
+                  
+                  // Sign out setelah membuat profile
+                  await supabase.auth.signOut();
+                  
+                  throw new Error("Profile berhasil dibuat. Silakan login dengan email dan password Anda.");
+                }
+              } catch (signInError) {
+                console.error("❌ Error in profile creation flow:", signInError);
+                throw new Error(signInError.message || "Gagal memproses registrasi. Silakan hubungi admin.");
+              }
+            }
+          } catch (profileCheckError) {
+            console.error("❌ Error in profile check:", profileCheckError);
+            throw new Error(profileCheckError.message || "Terjadi kesalahan. Silakan coba lagi atau hubungi admin.");
+          }
+        } else {
+          // Handle other auth errors
+          if (error.code === '406' || error.status === 406) {
+            throw new Error("Server tidak dapat memproses request. Silakan refresh halaman dan coba lagi.");
+          }
+          console.error("❌ Register error:", error);
+          throw new Error(error.message || "Registrasi gagal. Silakan coba lagi.");
+        }
       }
 
-      // Auto-create profile jika trigger tidak bekerja
+      // Auto-create profile untuk user baru
       if (data.user) {
         try {
-          console.log("🔍 Creating profile for user:", {
+          console.log("🔍 Creating profile for new user:", {
             id: data.user.id,
             email: email.toLowerCase(),
             full_name: fullName,
@@ -222,6 +313,9 @@ export function AuthProvider({ children }) {
 
           if (profileError) {
             console.error("❌ Profile creation failed:", profileError);
+            if (profileError.code === '406' || profileError.status === 406) {
+              throw new Error("Server tidak dapat membuat profile. User terdaftar tapi profile gagal dibuat. Silakan hubungi admin.");
+            }
             throw profileError;
           }
 
@@ -230,6 +324,7 @@ export function AuthProvider({ children }) {
           console.error("❌ Profile creation error:", profileError);
           // Jangan throw error di sini agar registrasi tetap berhasil
           // User bisa dibuat manual oleh admin jika perlu
+          console.warn("⚠️ User registered but profile creation failed. Admin may need to create profile manually.");
         }
       }
 

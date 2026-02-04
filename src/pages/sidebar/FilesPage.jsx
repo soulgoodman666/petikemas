@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useDarkMode } from "../../context/DarkModeContext";
-import { getAllFiles, getMyFiles } from "../../services/fileService";
-import { FileText } from "lucide-react";
+import { getAllFiles, getMyFiles, deleteFile } from "../../services/fileService";
+import { FileText, Trash2, AlertTriangle } from "lucide-react";
 
 export default function FilesPage() {
   const { user } = useAuth();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchFiles = async () => {
@@ -37,13 +39,83 @@ export default function FilesPage() {
     if (user) fetchFiles();
   }, [user]);
 
+  // Handle delete file
+  const handleDeleteFile = async (fileId, filePath) => {
+    setDeleting(true);
+    
+    try {
+      const result = await deleteFile(fileId, filePath);
+      
+      if (result.error) {
+        console.error("Error deleting file:", result.error);
+        alert("Gagal menghapus file: " + result.error);
+      } else {
+        // Remove file from state
+        setFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
+        console.log("✅ File deleted successfully");
+        setDeleteConfirm(null);
+      }
+    } catch (error) {
+      console.error("Error in handleDeleteFile:", error);
+      alert("Terjadi kesalahan saat menghapus file");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) return <p>Loading files...</p>;
 
-    return (
+  return (
     <div className="p-6">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 dark:bg-gray-800 dark:border-gray-700">
           <h1 className="text-2xl font-bold text-gray-900 mb-6 dark:text-white">Daftar File</h1>
+
+          {/* Delete Confirmation Modal */}
+          {deleteConfirm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 dark:bg-gray-800">
+                <div className="flex items-center gap-3 mb-4">
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Konfirmasi Hapus File
+                  </h3>
+                </div>
+                
+                <p className="text-gray-600 mb-6 dark:text-gray-300">
+                  Apakah Anda yakin ingin menghapus file "<strong>{deleteConfirm.file_name}</strong>"? 
+                  File ini akan dihapus secara permanen dan tidak dapat dikembalikan.
+                </p>
+                
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => setDeleteConfirm(null)}
+                    disabled={deleting}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    onClick={() => handleDeleteFile(deleteConfirm.id, deleteConfirm.file_path)}
+                    disabled={deleting}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {deleting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Menghapus...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4" />
+                        Hapus
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {files.length === 0 ? (
             <div className="text-center py-8">
@@ -60,6 +132,9 @@ export default function FilesPage() {
                     <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Uploader</th>
                     <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Target User</th>
                     <th className="text-left py-3 px-4 text-gray-700 dark:text-gray-300">Tanggal</th>
+                    {user?.isAdmin && (
+                      <th className="text-center py-3 px-4 text-gray-700 dark:text-gray-300">Aksi</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
@@ -108,6 +183,17 @@ export default function FilesPage() {
                           minute: '2-digit'
                         })}
                       </td>
+                      {user?.isAdmin && (
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            onClick={() => setDeleteConfirm(file)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-red-400 dark:hover:bg-red-900/20"
+                            title="Hapus File"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

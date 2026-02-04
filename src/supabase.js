@@ -3,5 +3,18 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../supabase_config';
 
 export const supabase = createClient(
   SUPABASE_URL,
-  SUPABASE_ANON_KEY
+  SUPABASE_ANON_KEY,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    },
+    global: {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    }
+  }
 );
