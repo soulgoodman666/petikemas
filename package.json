@@ -11,17 +11,17 @@
     "dev": "vite",
     "build": "vite build",
     "build:prod": "vite build --mode production",
-    "build:analyze": "vite build --mode production && npx vite-bundle-analyzer dist/stats.html",
+    "build:vercel": "vite build",
     "preview": "vite preview",
     "deploy": "./deploy.sh",
     "deploy:netlify": "npm run build:prod && netlify deploy --prod --dir=dist",
-    "deploy:preview": "npm run build:prod && netlify deploy --dir=dist",
+    "deploy:vercel": "npm run build:vercel",
+    "start": "vite preview",
     "optimize:mobile": "echo 'Mobile optimization complete'",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf dist node_modules/.vite",
-    "start": "npm run dev"
+    "clean": "rm -rf dist node_modules/.vite"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",

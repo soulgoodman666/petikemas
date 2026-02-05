@@ -1,24 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
-import { SUPABASE_URL, SUPABASE_ANON_KEY, IS_SUPABASE_READY } from '../supabase_config'
 
-// Safe Supabase initialization
-export const supabase = IS_SUPABASE_READY
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
-      },
-      global: {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      }
-    })
-  : null
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-// Log warning if Supabase is not ready (only in development)
-if (!IS_SUPABASE_READY && import.meta.env.DEV) {
-  console.warn('⚠️ Supabase not initialized: Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY environment variables')
-}
+export const supabase = createClient(
+  supabaseUrl,
+  supabaseAnonKey
+)
