@@ -2,6 +2,9 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "functions": {
+    "src": "*.js"
+  },
   "builds": [
     {
       "src": "package.json",
@@ -56,5 +59,6 @@
   ],
   "env": {
     "VITE_ENV": "production"
-  }
+  },
+  "nodeVersion": "20.11.1"
 }
