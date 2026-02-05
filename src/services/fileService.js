@@ -1,4 +1,4 @@
-import { supabase } from "../supabase";
+import { supabase, IS_SUPABASE_READY } from "../supabase";
 
 /* =========================
    ADMIN

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ShieldCheck, User, Lock, Mail, UserPlus, ChevronRight, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { supabase } from "../../supabase";
+import { supabase, IS_SUPABASE_READY } from "../../supabase";
 
 export default function Login() {
   const { login, register, loading: authLoading } = useAuth(); // Gunakan loading dari auth

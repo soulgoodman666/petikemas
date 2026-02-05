@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useDarkMode } from "../../context/DarkModeContext";
-import { supabase } from "../../supabase";
+import { supabase, IS_SUPABASE_READY } from "../../supabase";
 import { useNavigate } from "react-router-dom";
 import { getAllUsers, getMyFiles, getUserById } from "../../services/fileService";
 import { User, Mail, ShieldCheck, Search, FileText, X, Calendar, Image as ImageIcon, Eye } from "lucide-react";

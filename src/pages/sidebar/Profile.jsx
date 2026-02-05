@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useDarkMode } from "../../context/DarkModeContext";
-import { supabase } from "../../supabase";
+import { supabase, IS_SUPABASE_READY } from "../../supabase";
 import {
   User, Mail, Calendar, Phone, Building, MapPin,
   Edit2, Save, X, Shield, CheckCircle,

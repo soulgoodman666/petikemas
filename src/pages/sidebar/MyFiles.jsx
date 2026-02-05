@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useDarkMode } from "../../context/DarkModeContext";
 import { getMyFiles, getDownloadUrl, getUserById } from "../../services/fileService";
-import { supabase } from "../../supabase";
+import { supabase, IS_SUPABASE_READY } from "../../supabase";
 import { FileText, Download, Eye, Search, Calendar, User, AlertCircle, Folder, TrendingUp, Activity, Clock, Users, Globe, Megaphone, X, Image as ImageIcon } from "lucide-react";
 import DashboardSidebar from '../../components/DashboardSidebar';
 

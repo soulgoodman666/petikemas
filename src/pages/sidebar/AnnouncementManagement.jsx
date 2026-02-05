@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useDarkMode } from "../../context/DarkModeContext";
-import { supabase } from "../../supabase";
+import { supabase, IS_SUPABASE_READY } from "../../supabase";
 import { Megaphone, Plus, Edit2, Trash2, CheckCircle, AlertCircle, X, Users, Image as ImageIcon } from "lucide-react";
 import DashboardSidebar from '../../components/DashboardSidebar';
 
