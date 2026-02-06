@@ -1,57 +1,61 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>404 - Page Not Found | PETIKEMAS PP</title>
-    <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        margin: 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-      }
-      .container {
-        text-align: center;
-        padding: 2rem;
-      }
-      h1 {
-        font-size: 4rem;
-        margin: 0;
-        font-weight: 800;
-      }
-      h2 {
-        font-size: 1.5rem;
-        margin: 1rem 0;
-        font-weight: 400;
-      }
-      .btn {
-        display: inline-block;
-        padding: 0.75rem 2rem;
-        background: white;
-        color: #667eea;
-        text-decoration: none;
-        border-radius: 0.5rem;
-        font-weight: 600;
-        margin-top: 1rem;
-        transition: transform 0.2s;
-      }
-      .btn:hover {
-        transform: translateY(-2px);
-      }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    
+    <!-- Primary Meta Tags -->
+    <title>PETIKEMAS PP - Sistem Manajemen Peti Kemas</title>
+    <meta name="title" content="PETIKEMAS PP - Sistem Manajemen Peti Kemas" />
+    <meta name="description" content="Sistem manajemen peti kemas yang modern dan efisien untuk PT Pelabuhan Indonesia" />
+    <meta name="keywords" content="peti kemas, pelabuhan, management system, PT Pelabuhan Indonesia" />
+    <meta name="author" content="PT Pelabuhan Indonesia" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://petikemas-pp.netlify.app/" />
+    <meta property="og:title" content="PETIKEMAS PP - Sistem Manajemen Peti Kemas" />
+    <meta property="og:description" content="Sistem manajemen peti kemas yang modern dan efisien" />
+    <meta property="og:image" content="/og-image.png" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://petikemas-pp.netlify.app/" />
+    <meta property="twitter:title" content="PETIKEMAS PP - Sistem Manajemen Peti Kemas" />
+    <meta property="twitter:description" content="Sistem manajemen peti kemas yang modern dan efisien" />
+    <meta property="twitter:image" content="/og-image.png" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
+    
+    <!-- Preconnect to Supabase -->
+    <link rel="preconnect" href="https://qdtxdsqghfckggboylyh.supabase.co" />
+    <link rel="preconnect" href="https://api.supabase.io" />
+    
+    <!-- Theme -->
+    <meta name="theme-color" content="#2563eb" />
+    
+    <!-- Manifest for PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <script type="module" crossorigin src="/petikemas/assets/index-CwqZ9va0.js"></script>
+    <link rel="stylesheet" crossorigin href="/petikemas/assets/index-CSkrVkbb.css">
   </head>
   <body>
-    <div class="container">
-      <h1>404</h1>
-      <h2>Page Not Found</h2>
-      <p>The page you're looking for doesn't exist.</p>
-      <a href="/" class="btn">Go Home</a>
-    </div>
+    <div id="root"></div>
+    
+    <!-- Fallback for older browsers -->
+    <script>
+      // Check if browser supports required features
+      if (!window.Promise || !window.fetch) {
+        document.body.innerHTML = '<div style="font-family: Arial, sans-serif; text-align: center; padding: 50px;"><h2>Browser Tidak Didukung</h2><p>Browser Anda tidak mendukung fitur yang diperlukan. Silakan gunakan browser modern.</p></div>';
+      }
+    </script>
   </body>
 </html>
