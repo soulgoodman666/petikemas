@@ -8,7 +8,7 @@ export default function Layout() {
       <main
         className="relative ml-64 min-h-screen w-full bg-cover bg-center dark:bg-gray-900"
         style={{
-          backgroundImage: "url('/images/pelindo2.png')"
+          backgroundImage: "url('public/images/pelindo2.png')"
         }}
       >
         <div className="relative p-6">

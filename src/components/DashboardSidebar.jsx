@@ -52,7 +52,7 @@ export default function DashboardSidebar() {
       <div className="p-6 border-b border-slate-700">
         <div className="flex items-center">
           <img src=
-            "images/fotopelindo.png"
+            "public/images/fotopelindo.png"
             alt="Pelindo Logo"
             className="h-30 w-auto"
           />
