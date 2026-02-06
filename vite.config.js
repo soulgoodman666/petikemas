@@ -5,9 +5,7 @@ export default defineConfig({
   base: '/petikemas/',
   plugins: [react()],
   build: {
-    target: 'esnext',
-    minify: false,
-    sourcemap: false,
-    rollupOptions: {}
+    outDir: 'docs',
+    emptyOutDir: true
   }
 })
