@@ -16400,7 +16400,7 @@ function Layout() {
       {
         className: "relative ml-64 min-h-screen w-full bg-cover bg-center dark:bg-gray-900",
         style: {
-          backgroundImage: "url('/images/pelindo2.png')"
+          backgroundImage: "url('images/pelindo2.png')"
         },
         children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "relative p-6", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Outlet, {}) })
       }
