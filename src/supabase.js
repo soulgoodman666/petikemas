@@ -4,18 +4,13 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error('❌ Supabase ENV tidak ditemukan')
+  throw new Error("Supabase ENV tidak ditemukan di production")
 }
 
-export const supabase = createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY,
-  {
-    auth: {
-      persistSession: true,        // 🔥 PENTING
-      autoRefreshToken: true,      // 🔥 PENTING
-      detectSessionInUrl: true,    // 🔥 PENTING (login redirect)
-      storage: window.localStorage // 🔥 AGAR TIDAK LOGOUT SAAT REFRESH
-    }
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
   }
-)
+})
