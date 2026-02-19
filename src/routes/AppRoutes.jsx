@@ -101,3 +101,7 @@ export default function AppRoutes() {
     </ErrorBoundary>
   )
 }
+
+window.addEventListener("error", (e) => {
+  document.body.innerHTML += `<pre style="color:red">${e.message}</pre>`
+})
