@@ -17,20 +17,6 @@ export default function Upload() {
   const [uploadProgress, setUploadProgress] = useState({});
   const [completedUploads, setCompletedUploads] = useState([]);
 
-  // Authentication check
-  useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        navigate("/login", { replace: true });
-        return;
-      }
-      if (!user.isAdmin) {
-        navigate("/download", { replace: true });
-        return;
-      }
-    }
-  }, [user, authLoading, navigate]);
-
   // Form state - sekarang menggunakan array files
   const [formData, setFormData] = useState({
     title: "",
@@ -272,13 +258,6 @@ export default function Upload() {
               targetUserId: "",
               files: []
             });
-          }
-          
-          if (uploadedFiles.length > 0) {
-            // Navigate setelah 2 detik
-            setTimeout(() => {
-              navigate("/my-files");
-            }, 2000);
           }
         }, 1500);
       }

@@ -1,4 +1,4 @@
-import { supabase, IS_SUPABASE_READY } from "../supabase";
+import { supabase} from "../supabase";
 
 /* =========================
    ADMIN
@@ -7,13 +7,38 @@ import { supabase, IS_SUPABASE_READY } from "../supabase";
 // Admin - Get all files dengan user info
 export const getAllFiles = async () => {
   try {
+    console.log("🔍 Admin fetching all files...");
+
+    // Validate Supabase client
+    if (!supabase) {
+      const error = new Error("Supabase client not initialized");
+      console.error("❌ Supabase client error:", error.message);
+      return { data: null, error };
+    }
+
     // Ambil semua files
     const { data: files, error } = await supabase
       .from("files")
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error("❌ Error fetching files:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        status: error.status
+      });
+      throw new Error(`Failed to fetch files: ${error.message} (Code: ${error.code})`);
+    }
+
+    console.log("📊 Files fetched:", files?.length || 0, "files");
+
+    if (!files || files.length === 0) {
+      console.log("⚠️ No files found in database");
+      return { data: [], error: null };
+    }
 
     // Ambil semua user IDs dari files
     const userIds = new Set();
@@ -22,11 +47,38 @@ export const getAllFiles = async () => {
       if (file.target_user_id) userIds.add(file.target_user_id);
     });
 
+    console.log("👥 User IDs to fetch:", Array.from(userIds));
+
+    // Skip user fetching if no user IDs
+    if (userIds.size === 0) {
+      console.log("ℹ️ No user IDs to fetch, returning files without user info");
+      const filesWithUsers = files?.map(file => ({
+        ...file,
+        owner: null,
+        target_user: null
+      })) || [];
+      return { data: filesWithUsers, error: null };
+    }
+
     // Ambil data user
-    const { data: users } = await supabase
+    const { data: users, error: userError } = await supabase
       .from("profiles")
       .select("id, email, full_name")
       .in("id", Array.from(userIds));
+
+    if (userError) {
+      console.error("❌ Error fetching users:", {
+        message: userError.message,
+        details: userError.details,
+        hint: userError.hint,
+        code: userError.code,
+        status: userError.status
+      });
+      // Continue with files but without user info
+      console.warn("⚠️ Continuing without user info due to profile fetch error");
+    }
+
+    console.log("👥 Users fetched:", users?.length || 0, "users");
 
     // Gabungkan data
     const filesWithUsers = files?.map(file => ({
@@ -35,10 +87,29 @@ export const getAllFiles = async () => {
       target_user: users?.find(u => u.id === file.target_user_id) || null
     })) || [];
 
+    console.log("✅ Final files with users:", filesWithUsers.length, "files");
+
     return { data: filesWithUsers, error: null };
   } catch (error) {
-    console.error("Error in getAllFiles:", error);
-    return { data: null, error };
+    if (error?.name === "AbortError") {
+      console.warn("⛔ getAllFiles aborted");
+      return { data: [], error: null };
+    }
+
+    console.error("❌ Error in getAllFiles:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+
+    return {
+      data: [], // 🔑 WAJIB array
+      error: {
+        message: error.message || "Unknown error",
+        code: error.code || "UNKNOWN",
+        status: error.status || 500
+      }
+    };
   }
 };
 
@@ -60,7 +131,7 @@ export const uploadFileToStorage = async (file, filePath) => {
   }
 };
 
-// Admin - Delete file (from database and storage)
+  // Admin - Delete file (from database and storage)
 export const deleteFile = async (fileId, filePath) => {
   try {
     // 1. Delete from storage if filePath provided
@@ -89,7 +160,7 @@ export const deleteFile = async (fileId, filePath) => {
   }
 };
 
-// User - Get files yang bisa dia lihat
+  // User - Get files yang bisa dia lihat
 export const getMyFiles = async (userId) => {
   try {
     if (!userId) throw new Error("User ID diperlukan");
@@ -104,8 +175,8 @@ export const getMyFiles = async (userId) => {
       .is("target_user_id", null)
       .order("created_at", { ascending: false });
 
-    console.log("📊 Public files test:", { 
-      count: publicFilesTest?.length || 0, 
+    console.log("📊 Public files test:", {
+      count: publicFilesTest?.length || 0,
       error: publicError,
       files: publicFilesTest?.map(f => ({
         id: f.id,
@@ -165,7 +236,7 @@ export const getMyFiles = async (userId) => {
   }
 };
 
-// User - Get files dengan detail user
+  // User - Get files dengan detail user
 export const getMyFilesWithDetails = async (userId) => {
   try {
     // 1. Ambil files yang bisa diakses
@@ -202,7 +273,7 @@ export const getMyFilesWithDetails = async (userId) => {
   }
 };
 
-/* =========================
+  /* =========================
    STORAGE & DOWNLOAD
 ========================= */
 
@@ -228,7 +299,7 @@ export const getSignedUrl = async (filePath) => {
   }
 };
 
-// Upload file dengan storage dan database (CONSOLIDATED VERSION)
+  // Upload file dengan storage dan database (CONSOLIDATED VERSION)
 export const uploadFileToStorageAndDB = async (payload) => {
   try {
     const {
@@ -244,7 +315,7 @@ export const uploadFileToStorageAndDB = async (payload) => {
     } = payload;
 
     console.log("📤 Uploading file to storage...");
-    
+
     // 1. Upload ke storage
     const { error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
@@ -284,14 +355,14 @@ export const uploadFileToStorageAndDB = async (payload) => {
 
     console.log("✅ Database insert success:", data);
     return { data, error: null };
-    
+
   } catch (error) {
     console.error("❌ Error in uploadFileToStorageAndDB:", error);
     return { data: null, error };
   }
 };
 
-// Simple upload function (mirip upload.js style but konsisten)
+  // Simple upload function (mirip upload.js style but konsisten)
 export const uploadFile = async (file, metadata = {}) => {
   try {
     // Generate unique file name
@@ -346,7 +417,7 @@ export const uploadFile = async (file, metadata = {}) => {
   }
 };
 
-/* =========================
+  /* =========================
    USERS
 ========================= */
 

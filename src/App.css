@@ -1,301 +1,70 @@
-/* Reset dan base styles untuk mobile */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  font-size: 14px; /* Base font size lebih kecil untuk mobile */
-}
-
-/* Untuk tablet ke atas */
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-#root {
-  max-width: 100%; /* Ubah dari 1280px ke 100% untuk mobile */
-  margin: 0 auto;
-  padding: 1rem; /* Kurangi padding untuk mobile */
-  text-align: center;
-  min-height: 100vh;
-  width: 100%;
-}
-
-/* Untuk tablet */
-@media (min-width: 768px) {
-  #root {
-    padding: 1.5rem;
-    max-width: 90%;
-  }
-}
-
-/* Untuk desktop */
-@media (min-width: 1024px) {
-  #root {
-    max-width: 1280px;
-    padding: 2rem;
-  }
-}
-
-/* Logo responsif */
-.logo {
-  height: 4em; /* Perkecil untuk mobile */
-  padding: 1em;
-  will-change: filter;
-  transition: filter 300ms;
-  max-width: 100%;
-}
-
-/* Untuk tablet */
-@media (min-width: 768px) {
-  .logo {
-    height: 5em;
-    padding: 1.25em;
-  }
-}
-
-/* Untuk desktop */
-@media (min-width: 1024px) {
-  .logo {
-    height: 6em;
-    padding: 1.5em;
-  }
-}
-
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-/* Card responsif */
-.card {
-  padding: 1.5em; /* Kurangi padding untuk mobile */
-  margin: 1rem auto;
-  border-radius: 8px;
-  background: #f9f9f9;
-  width: 100%;
-  max-width: 100%;
-}
-
-/* Untuk tablet */
-@media (min-width: 768px) {
-  .card {
-    padding: 1.75em;
-    margin: 1.5rem auto;
-    max-width: 90%;
-  }
-}
-
-/* Untuk desktop */
-@media (min-width: 1024px) {
-  .card {
-    padding: 2em;
-    max-width: 800px;
-  }
-}
-
-.read-the-docs {
-  color: #888;
-  font-size: 0.9rem;
-  padding: 0 1rem;
-  line-height: 1.4;
-}
-
-/* Untuk tablet */
-@media (min-width: 768px) {
-  .read-the-docs {
-    font-size: 1rem;
-  }
-}
-
-/* Utility classes untuk responsif */
-.container {
-  width: 100%;
-  padding-right: 1rem;
-  padding-left: 1rem;
-  margin-right: auto;
-  margin-left: auto;
-}
-
-/* Grid responsif */
-.responsive-grid {
-  display: grid;
-  grid-template-columns: 1fr; /* 1 kolom untuk mobile */
-  gap: 1rem;
-  padding: 1rem;
-}
-
-/* Untuk tablet - 2 kolom */
-@media (min-width: 768px) {
-  .responsive-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1.5rem;
-    padding: 1.5rem;
-  }
-}
-
-/* Untuk desktop - 3 kolom */
-@media (min-width: 1024px) {
-  .responsive-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
-    padding: 2rem;
-  }
-}
-
-/* Flexbox responsif */
-.flex-responsive {
-  display: flex;
-  flex-direction: column; /* Stack vertikal di mobile */
-  gap: 1rem;
-  align-items: center;
-}
-
-/* Untuk tablet ke atas - flex row */
-@media (min-width: 768px) {
-  .flex-responsive {
-    flex-direction: row;
-    justify-content: center;
-    gap: 1.5rem;
-  }
-}
-
-/* Button yang touch-friendly untuk mobile */
-.btn-mobile {
-  min-height: 44px; /* Minimum touch target size */
-  min-width: 44px;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  border-radius: 8px;
-  cursor: pointer;
-  border: none;
-  transition: all 0.3s ease;
-}
-
-/* Hide/Show elements berdasarkan breakpoint */
-.mobile-only {
-  display: block;
-}
-
-.desktop-only {
-  display: none;
-}
-
-@media (min-width: 768px) {
-  .mobile-only {
-    display: none;
-  }
-  
-  .desktop-only {
-    display: block;
-  }
-}
-
-/* Typography responsif */
-h1 {
-  font-size: 1.75rem; /* Kecil untuk mobile */
-  line-height: 1.2;
-  margin-bottom: 1rem;
-}
-
-@media (min-width: 768px) {
-  h1 {
-    font-size: 2.25rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  h1 {
-    font-size: 3rem;
-  }
-}
-
-/* Form elements responsif */
-input, textarea, select {
-  width: 100%;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
-/* Untuk tablet ke atas */
-@media (min-width: 768px) {
-  input, textarea, select {
-    max-width: 500px;
-  }
-}
-/* Responsive breakpoints */
 :root {
-  --mobile: 640px;
-  --tablet: 768px;
-  --desktop: 1024px;
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
 }
 
-/* Smooth transitions */
-* {
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
 }
 
-/* Sidebar animation */
-.sidebar-enter {
-  transform: translateX(-100%);
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
 }
 
-.sidebar-enter-active {
-  transform: translateX(0);
-  transition: transform 300ms ease-in-out;
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
 }
 
-.sidebar-exit {
-  transform: translateX(0);
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
 }
 
-.sidebar-exit-active {
-  transform: translateX(-100%);
-  transition: transform 300ms ease-in-out;
-}
-
-/* Touch-friendly adjustments */
-@media (max-width: 768px) {
-  button, 
-  a[role="button"] {
-    min-height: 44px;
-    min-width: 44px;
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
   }
-  
-  /* Increase font size for better readability on mobile */
-  body {
-    font-size: 16px; /* Prevents iOS zoom on input focus */
+  a:hover {
+    color: #747bff;
   }
-  
-  /* Better spacing for mobile */
-  .container {
-    padding-left: 1rem;
-    padding-right: 1rem;
+  button {
+    background-color: #f9f9f9;
   }
 }
 

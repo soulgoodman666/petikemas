@@ -5,7 +5,8 @@ export default {
     "./src/**/*.{js,jsx}",
   ],
   darkMode: "class",
-  content: ["./index.html", "./src/**/*.{js,jsx}"],
-  theme: { extend: {} },
+  theme: {
+    extend: {},
+  },
   plugins: [],
 };

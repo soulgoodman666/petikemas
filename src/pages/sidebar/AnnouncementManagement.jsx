@@ -1,9 +1,19 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useDarkMode } from "../../context/DarkModeContext";
-import { supabase, IS_SUPABASE_READY } from "../../supabase";
-import { Megaphone, Plus, Edit2, Trash2, CheckCircle, AlertCircle, X, Users, Image as ImageIcon } from "lucide-react";
-import DashboardSidebar from '../../components/DashboardSidebar';
+import { supabase } from "../../supabase";
+import { 
+  Megaphone, 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  CheckCircle, 
+  AlertCircle, 
+  X, 
+  Users, 
+  Image as ImageIcon,
+  Eye  // Added missing import
+} from "lucide-react";
 
 export default function AnnouncementManagement() {
   const { user } = useAuth();
@@ -29,13 +39,6 @@ export default function AnnouncementManagement() {
   // Image modal state
   const [selectedImage, setSelectedImage] = useState(null);
   const [showImageModal, setShowImageModal] = useState(false);
-
-  // Check if user is admin
-  useEffect(() => {
-    if (!user || !user.isAdmin) {
-      window.location.href = "/";
-    }
-  }, [user]);
 
   // Fetch announcements
   const fetchAnnouncements = async () => {
@@ -237,7 +240,6 @@ export default function AnnouncementManagement() {
   if (loading) {
     return (
       <div className="min-h-screen bg-transparent">
-        <DashboardSidebar />
         <div className="ml-30 p-6">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
@@ -250,7 +252,6 @@ export default function AnnouncementManagement() {
 
   return (
     <div className="min-h-screen bg-transparent">
-      <DashboardSidebar />
       <div className="ml-30 p-6">
         {/* Success/Error Messages */}
         {success && (
@@ -533,7 +534,7 @@ export default function AnnouncementManagement() {
                       onChange={(e) => setFormData({ ...formData, target_user_id: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                     >
-                      <option value="public">🌐 Public (Semua User)</option>
+                      <option value="">🌐 Public (Semua User)</option>
                       {loadingUsers ? (
                         <option disabled>Loading users...</option>
                       ) : users.length === 0 ? (

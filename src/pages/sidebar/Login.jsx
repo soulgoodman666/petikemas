@@ -1,10 +1,22 @@
-import { useState, useEffect } from "react";
-import { ShieldCheck, User, Lock, Mail, UserPlus, ChevronRight, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { supabase, IS_SUPABASE_READY } from "../../supabase";
+import {
+  ShieldCheck,
+  User,
+  Lock,
+  Mail,
+  UserPlus,
+  ChevronRight,
+  Building2,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
 export default function Login() {
-  const { login, register, loading: authLoading } = useAuth(); // Gunakan loading dari auth
+  const { login, register, loading: authLoading, user } = useAuth();
+  const navigate = useNavigate();
+  const containerRef = useRef(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -13,23 +25,28 @@ export default function Login() {
   const [success, setSuccess] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [localLoading, setLocalLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [emailValid, setEmailValid] = useState(true);
+  const [formMode, setFormMode] = useState('login');
 
-  // HAPUS useEffect redirect! Biarkan App.jsx/routing yang handle
+  const validateEmail = (email) => {
+    const isValid = email.toLowerCase().endsWith('@tps.co.id');
+    setEmailValid(isValid);
+    return isValid;
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     setLocalLoading(true);
 
-    // Validasi
     if (!email || !password) {
       setError("Email dan password harus diisi");
       setLocalLoading(false);
       return;
     }
 
-    // Validasi domain
-    if (!email.toLowerCase().endsWith('@tps.co.id')) {
+    if (!validateEmail(email)) {
       setError("Hanya email dengan domain @tps.co.id yang diperbolehkan");
       setLocalLoading(false);
       return;
@@ -37,11 +54,10 @@ export default function Login() {
 
     try {
       await login(email, password);
-      // Redirect akan dihandle oleh App.jsx/routing
-      // JANGAN navigate di sini!
+      navigate("/files", { replace: true });
     } catch (err) {
       console.error("Login error:", err);
-      setError(err.message);
+      setError(err.response?.data?.message || "Login gagal. Periksa kredensial Anda.");
     } finally {
       setLocalLoading(false);
     }
@@ -50,47 +66,33 @@ export default function Login() {
   const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
-    setSuccess("");
     setLocalLoading(true);
 
-    // Validasi form
     if (!email || !password || !fullName) {
       setError("Semua field harus diisi");
       setLocalLoading(false);
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password minimal 6 karakter");
-      setLocalLoading(false);
-      return;
-    }
-
-    // Validasi domain
-    if (!email.toLowerCase().endsWith('@tps.co.id')) {
+    if (!validateEmail(email)) {
       setError("Hanya email dengan domain @tps.co.id yang diperbolehkan");
       setLocalLoading(false);
       return;
     }
 
     try {
-      // Register ke Supabase
       await register(email, password, fullName);
-
-      setSuccess(
-        "Registrasi berhasil. Silakan cek email untuk verifikasi sebelum login."
-      );
-
-      // Kembali ke mode login
-      setIsLogin(true);
-
-      // Reset form
-      setEmail("");
-      setPassword("");
-      setFullName("");
+      setSuccess("Registrasi berhasil! Silakan login.");
+      setTimeout(() => {
+        setIsLogin(true);
+        setFormMode('login');
+        setEmail("");
+        setPassword("");
+        setFullName("");
+      }, 2000);
     } catch (err) {
-      console.error("REGISTER ERROR:", err);
-      setError(err?.message || "Registrasi gagal. Silakan coba lagi.");
+      console.error("Register error:", err);
+      setError(err.response?.data?.message || "Registrasi gagal. Silakan coba lagi.");
     } finally {
       setLocalLoading(false);
     }
@@ -99,222 +101,335 @@ export default function Login() {
   const toggleMode = () => {
     setError("");
     setSuccess("");
-    setEmail("");
-    setPassword("");
-    setFullName("");
     setIsLogin(!isLogin);
+    setFormMode(isLogin ? 'register' : 'login');
   };
 
   const isLoading = localLoading || authLoading;
 
+  useEffect(() => {
+    if (user) {
+      navigate("/files", { replace: true });
+    }
+  }, [user, navigate]);
+
+
+  // Effect untuk animasi form transisi
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Force re-render untuk transisi CSS
+    }, 10);
+    return () => clearTimeout(timer);
+  }, [isLogin]);
+
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 to-gray-100">
-      {/* LEFT SIDE - Branding Section */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-emerald-500/5"></div>
+    <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-br from-slate-50 via-blue-20 to-indigo-50" ref={containerRef}>
+      {/* Left Panel - Enhanced Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-cover bg-center bg-no-repeat items-center justify-center relative overflow-hidden animate-fadeIn"
+        style={{
+          backgroundImage: "url('/images/pelindo2.png')"
+        }}
+      >
 
-        {/* Decorative Elements */}
-        <div className="absolute top-10 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        {/* Subtle grid pattern */}
+        <div
+          className="absolute inset-0 opacity-40"
+          style={{
+            backgroundImage: `
+        linear-gradient(to right, rgba(0,0,0,0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,0,0,0.04) 1px, transparent 1px)
+      `,
+            backgroundSize: '60px 60px'
+          }}
+        ></div>
 
-        <div className="relative z-10 p-12">
-        </div>
+        {/* Soft light glow */}
+        <div className="absolute -top-20 -left-20 w-96 h-96 bg-gray-200 rounded-full blur-3xl opacity-40"></div>
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-gray-300 rounded-full blur-3xl opacity-30"></div>
 
-        {/* Logo Section - Centered */}
-        <div className="relative z-10 flex flex-col items-center justify-center mb-20">
-          <div className="relative mb-8">
-            {/* Outer Glow Effect */}
-            <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
-
-            {/* Logo Container */}
-            <div className="relative bg-white/90 backdrop-blur-sm p-8 rounded-3xl shadow-2xl shadow-blue-500/20 border border-white/20">
+        {/* Content */}
+        <div className="relative z-10 text-center p-12 max-w-2xl">
+          <div className="mb-8 animate-scaleIn">
+            <div className="inline-flex items-center justify-center p-2 bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200 hover:scale-105 transition-all duration-500">
               <img
-                src="https://vss.tps.co.id/assets/images/logo-tps.png"
-                alt="PETIKEMAS Logo"
-                className="w-72 h-72 object-contain"
+                src="/images/ptpss.png"
+                alt="Pelindo Logo"
+                className="w-72 md:w-80 lg:w-96 h-auto drop-shadow-md"
               />
             </div>
           </div>
         </div>
-
-        {/* Footer Text */}
-        <div className="relative z-10 p-12">
-          <div className="border-t border-slate-200 pt-6">
-            <p className="text-slate-500 text-sm">
-              © 2026 PT Terminal Petikemas.
-            </p>
-          </div>
-        </div>
       </div>
 
-      {/* RIGHT SIDE - Form Section */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
-        <div className="w-full max-w-lg">
-          <div className="bg-white rounded-3xl p-10 shadow-2xl shadow-blue-500/5 border border-slate-100">
-            {/* Header */}
-            <div className="flex flex-col items-center mb-12">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-50 to-emerald-50 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/10">
-                {isLogin ? (
-                  <ShieldCheck className="w-10 h-10 text-blue-600" />
-                ) : (
-                  <UserPlus className="w-10 h-10 text-emerald-600" />
-                )}
+
+      {/* Right Panel - Enhanced Form */}
+      <div className="hidden lg:flex lg:w-1/2 bg-cover bg-center bg-no-repeat items-center justify-center relative overflow-hidden animate-fadeIn"
+        style={{
+          backgroundImage: "url('/images/fotopelindo.jpeg')"
+        }}
+      >
+        <div className="w-full max-w-sm sm:max-w-md animate-slideUp">
+          <div className="lg:hidden mb-8 text-center">
+            <div className="inline-flex items-center gap-3">
+              <h2 className="text-2xl font-bold text-gray-800">Pelindo File Manager</h2>
+            </div>
+          </div>
+          <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-1.5 flex border border-gray-200">
+            <button
+              onClick={() => { setIsLogin(true); setFormMode('login'); }}
+              className={`flex-1 py-3 px-6 rounded-xl text-sm font-semibold transition-all duration-300 ${isLogin
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Lock className="w-4 h-4" />
+                <span>Sign In</span>
               </div>
-              <h2 className="text-3xl font-bold text-slate-900">
-                {isLogin ? "Selamat Datang" : "Buat Akun Baru"}
-              </h2>
-              <p className="text-slate-500 mt-2">
-                {isLogin
-                  ? "Masuk untuk melanjutkan ke sistem"
-                  : "Daftar untuk mengakses sistem"
-                }
-              </p>
+            </button>
+            <button
+              onClick={() => { setIsLogin(false); setFormMode('register'); }}
+              className={`flex-1 py-3 px-6 rounded-xl text-sm font-semibold transition-all duration-300 ${!isLogin
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                <span>Register</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Form Container */}
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 border border-gray-100">
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg animate-fadeIn">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {success && (
+              <div className="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-lg animate-fadeIn">
+                <div className="flex items-start gap-3">
+                  <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-green-600 text-sm">{success}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Form */}
+            <div key={formMode} className="animate-formSwitch">
+              {isLogin ? (
+                <form onSubmit={handleLogin} className="space-y-6">
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (e.target.value) validateEmail(e.target.value);
+                        }}
+                        className="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/50"
+                        placeholder="nama@tps.co.id"
+                        required
+                      />
+                      {email && (
+                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                          {emailValid ? (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-red-500" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {email && !emailValid && (
+                      <p className="mt-2 text-sm text-red-500 animate-fadeIn">Domain harus @tps.co.id</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Password
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200"
+                      >
+                        {showPassword ? 'Hide password' : 'Show password'}
+                      </button>
+                    </div>
+                    <div className="relative group">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-4 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/50"
+                        placeholder="••••••••"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3.5 px-4 rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      {isLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span className="font-semibold">Memproses...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-semibold">Sign In</span>
+                          <ChevronRight className="w-5 h-5" />
+                        </>
+                      )}
+                    </div>
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleRegister} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Full Name
+                    </label>
+                    <div className="relative group">
+                      <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <input
+                        type="text"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/50"
+                        placeholder="John Doe"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Email Address
+                    </label>
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (e.target.value) validateEmail(e.target.value);
+                        }}
+                        className="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/50"
+                        placeholder="nama@tps.co.id"
+                        required
+                      />
+                      {email && (
+                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                          {emailValid ? (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <AlertCircle className="w-5 h-5 text-red-500" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {email && !emailValid && (
+                      <p className="mt-2 text-sm text-red-500 animate-fadeIn">Domain harus @tps.co.id</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Password
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200"
+                      >
+                        {showPassword ? 'Hide password' : 'Show password'}
+                      </button>
+                    </div>
+                    <div className="relative group">
+                      <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/50"
+                        placeholder="Minimal 8 karakter"
+                        required
+                        minLength={8}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3.5 px-4 rounded-xl hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
+                  >
+                    <div className="flex items-center justify-center gap-3">
+                      {isLoading ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span className="font-semibold">Membuat Akun...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-semibold">Create Account</span>
+                          <UserPlus className="w-5 h-5" />
+                        </>
+                      )}
+                    </div>
+                  </button>
+                </form>
+              )}
             </div>
 
-            <form onSubmit={isLogin ? handleLogin : handleRegister} className="space-y-6">
-              {/* Messages */}
-              {success && (
-                <div className="bg-gradient-to-r from-emerald-50 to-green-50 border border-emerald-200 rounded-2xl p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                      <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                    </div>
-                    <p className="text-sm text-emerald-700">{success}</p>
-                  </div>
-                </div>
-              )}
-
-              {error && (
-                <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-2xl p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-red-700">{error}</p>
-                      {error?.includes("Email atau password salah") && (
-                        <p className="text-xs text-red-600 mt-1">
-                          Pastikan email sudah terdaftar dan password benar
-                        </p>
-                      )}
-                      {error?.includes("belum diverifikasi") && (
-                        <p className="text-xs text-red-600 mt-1">
-                          Silakan cek folder spam/junk email Anda
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Full Name Field (Register Only) */}
-              {!isLogin && (
-                <div className="group">
-                  <label className="block text-sm font-medium text-slate-700 mb-2 ml-1">
-                    Nama
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                      <User className={`w-5 h-5 transition-colors ${fullName ? 'text-blue-500' : 'text-slate-400'}`} />
-                    </div>
-                    <input
-                      type="text"
-                      className="w-full pl-12 pr-4 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-700 placeholder:text-slate-400"
-                      placeholder="Nama profile "
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Email Field */}
-              <div className="group">
-                <label className="block text-sm font-medium text-slate-700 mb-2 ml-1">
-                  Email
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Mail className={`w-5 h-5 transition-colors ${email ? 'text-blue-500' : 'text-slate-400'}`} />
-                  </div>
-                  <input
-                    type="email"
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-700 placeholder:text-slate-400"
-                    placeholder="nama@tps.co.id"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="mt-1 ml-1">
-                  <p className="text-xs text-blue-600">
-                    Hanya email dengan domain <span className="font-semibold">@tps.co.id</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Password Field */}
-              <div className="group">
-                <label className="block text-sm font-medium text-slate-700 mb-2 ml-1">
-                  Password
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <Lock className={`w-5 h-5 transition-colors ${password ? 'text-blue-500' : 'text-slate-400'}`} />
-                  </div>
-                  <input
-                    type="password"
-                    className="w-full pl-12 pr-4 py-4 bg-slate-50/50 border border-slate-200 rounded-2xl focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all outline-none text-slate-700 placeholder:text-slate-400"
-                    placeholder={isLogin ? "Masukkan password" : "Minimal 6 karakter"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
-                {!isLogin && (
-                  <p className="text-xs text-slate-500 mt-2 ml-1">
-                    Gunakan kombinasi huruf, angka, dan simbol untuk keamanan
-                  </p>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 rounded-2xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 mt-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-3"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>{isLogin ? "Memproses..." : "Mendaftarkan..."}</span>
-                  </>
-                ) : (
-                  <>
-                    <span>{isLogin ? "LOGIN" : "CREATE ACCOUNT"}</span>
-                    <ChevronRight className="w-5 h-5" />
-                  </>
-                )}
-              </button>
-            </form>
+            {/* Divider */}
+            <div className="my-8 flex items-center">
+              <div className="flex-1 border-t border-gray-200"></div>
+              <span className="px-4 text-sm text-gray-500">atau</span>
+              <div className="flex-1 border-t border-gray-200"></div>
+            </div>
 
             {/* Toggle Mode */}
-            <div className="mt-10 pt-8 border-t border-slate-100">
-              <div className="text-center">
-                <p className="text-slate-600">
-                  {isLogin ? "Belum memiliki akun?" : "Sudah memiliki akun?"}{" "}
-                  <button
-                    onClick={toggleMode}
-                    disabled={isLoading}
-                    className="text-blue-600 hover:text-blue-700 font-semibold transition-colors inline-flex items-center gap-1 disabled:opacity-50"
-                  >
-                    {isLogin ? "create account" : "Login here"}
-                  </button>
-                </p>
-              </div>
-            </div>
+            <button
+              onClick={toggleMode}
+              className="w-full text-center text-sm text-gray-600 hover:text-blue-600 transition-colors duration-200"
+            >
+              {isLogin
+                ? "Belum punya akun? Daftar di sini"
+                : "Sudah punya akun? Masuk di sini"
+              }
+            </button>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-8 text-center animate-fadeIn">
+            <p className="text-sm font-bold text-white">
+              © {new Date().getFullYear()} Petikemas. All rights reserved.
+            </p>
           </div>
         </div>
       </div>

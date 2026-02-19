@@ -1,502 +1,114 @@
-import { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
-import { supabase, IS_SUPABASE_READY } from "../supabase";
+import { createContext, useContext, useEffect, useState } from "react"
+import { supabase } from "../supabase"
 
-const AuthContext = createContext();
+const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const initializedRef = useRef(false);
-  const authListenerRef = useRef(null);
+  const [user, setUser] = useState(null)
+  const [role, setRole] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  // HARDCODED ADMIN LIST
-  const HARDCODED_ADMINS = [
-    'adminpp1@tps.co.id',
-    'admin@tps.co.id',
-    'adminpp2@tps.co.id',
-    'superadmin@tps.co.id'
-  ];
-
-  // ======================
-  // BUILD USER + ROLE (USING useCallback)
-  // ======================
-  const buildUser = useCallback(async (authUser) => {
-    console.log("🔄 buildUser called for:", authUser?.email || "null");
+  // 🔑 Ambil role user
+  // src/context/AuthContext.jsx (tambahkan di fetchRole)
+const fetchRole = async (userId) => {
+  try {
+    console.log("Fetching role for user ID:", userId);
     
-    if (!authUser) {
-      console.log("No auth user, setting user to null");
-      setUser(null);
-      return;
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", userId)
+      .single()
+
+    console.log("Role data:", data, "Error:", error);
+
+    if (!error && data?.role) {
+      setRole(data.role)
+      console.log("Role set to:", data.role);
+    } else {
+      setRole("user")
+      console.log("Default role set to: user");
     }
-
-    try {
-      console.log("🔍 Checking role for:", authUser.email);
-      
-      // CEK 1: Dari hardcoded admin list
-      const isHardcodedAdmin = HARDCODED_ADMINS.includes(authUser.email.toLowerCase());
-      
-      // CEK 2: Dari profiles table
-      let dbRole = 'user';
-      let fullName = '';
-      try {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("role, full_name")
-          .eq("id", authUser.id)
-          .maybeSingle();
-
-        if (!error && data) {
-          dbRole = data.role || 'user';
-          fullName = data.full_name || '';
-          console.log("📊 User found:", { dbRole, fullName });
-          console.log("📊 Profile found:", { dbRole, fullName });
-        } else if (error) {
-          console.log("⚠️ Profile not found:", error.message);
-        }
-      } catch (dbError) {
-        console.log("❌ Failed to fetch from profiles:", dbError.message);
-      }
-
-      // TENTUKAN ROLE: Hardcoded > Database
-      const isAdmin = isHardcodedAdmin || dbRole === 'admin';
-      const finalRole = isAdmin ? 'admin' : 'user';
-
-      console.log("🎯 Role determination:", {
-        email: authUser.email,
-        hardcodedAdmin: isHardcodedAdmin,
-        dbRole: dbRole,
-        isAdmin: isAdmin,
-        finalRole: finalRole
-      });
-
-      const newUser = {
-        id: authUser.id,
-        email: authUser.email,
-        full_name: fullName,
-        role: finalRole,
-        isAdmin: isAdmin,
-        permissions: isAdmin ? 
-          ['data', 'import', 'export', 'download', 'profile', 'settings', 'users'] : 
-          ['download', 'profile']
-      };
-
-      // Prevent unnecessary state updates
-      setUser(prev => {
-        if (!prev) return newUser;
-        
-        // Check if anything actually changed
-        const hasChanged = 
-          prev.id !== newUser.id ||
-          prev.email !== newUser.email ||
-          prev.full_name !== newUser.full_name ||
-          prev.role !== newUser.role ||
-          prev.isAdmin !== newUser.isAdmin;
-        
-        if (hasChanged) {
-          console.log("🔄 User state changed, updating");
-          return newUser;
-        }
-        
-        console.log("⏸️  User state unchanged, skipping update");
-        return prev;
-      });
-
-    } catch (err) {
-      console.error("❌ Error in buildUser:", err);
-      // Fallback ke user biasa jika error
-      setUser({
-        id: authUser.id,
-        email: authUser.email,
-        role: "user",
-        isAdmin: false,
-        permissions: ['download', 'profile']
-      });
-    }
-  }, []);
-
-  // ======================
-  // LOGIN EMAIL + PASSWORD
-  // ======================
-  const login = async (email, password) => {
-    console.log("🔐 Login attempt for:", email);
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
-      });
-
-      if (error) {
-        console.error("❌ Login error:", {
-          message: error.message,
-          status: error.status,
-          name: error.name
-        });
-        
-        if (error.message?.includes("Email not confirmed")) {
-          throw new Error("Email belum diverifikasi. Silakan cek email Anda.");
-        } else if (error.message?.includes("Invalid login credentials")) {
-          throw new Error("Email atau password salah");
-        }
-        throw new Error(error.message || "Login gagal");
-      }
-
-      console.log("✅ Login successful for:", data.user?.email);
-      return data;
-      
-    } catch (err) {
-      console.error("❌ Login catch error:", err);
-      throw err;
-    }
-  };
-
-  // ======================
-  // LOGIN GOOGLE
-  // ======================
-  const loginWithGoogle = async () => {
-    console.log("🌐 Starting Google OAuth login");
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent'
-        }
-      }
-    });
-
-    if (error) {
-      console.error("❌ Google OAuth error:", error);
-      throw new Error(error.message || "Google login gagal");
-    }
-  };
-
-  // ======================
-  // REGISTER USER
-  // ======================
-  const register = async (email, password, fullName) => {
-    console.log("📝 Registering user:", { email, fullName });
-    
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password: password.trim(),
-        options: {
-          data: {
-            full_name: fullName,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        },
-      });
-
-      if (error) {
-        console.error("❌ Supabase auth error:", {
-          message: error.message,
-          status: error.status,
-          code: error.code
-        });
-
-        // Handle user already registered error
-        if (error.message?.includes("User already registered")) {
-          console.log("ℹ️ User already exists in auth, checking profile...");
-          
-          // Cek apakah user sudah ada di profiles
-          try {
-            const { data: existingProfile, error: profileError } = await supabase
-              .from("profiles")
-              .select("id, email, full_name")
-              .eq("email", email.toLowerCase())
-              .maybeSingle();
-
-            if (profileError) {
-              console.error("❌ Error checking existing profile:", profileError);
-              if (profileError.code === '406' || profileError.status === 406) {
-                throw new Error("Server tidak dapat memproses request. Silakan coba lagi.");
-              }
-              throw new Error("Gagal memeriksa profile user. Silakan hubungi admin.");
-            } else if (existingProfile) {
-              console.log("✅ User already has profile:", existingProfile);
-              throw new Error("User sudah terdaftar. Silakan login.");
-            } else {
-              console.log("ℹ️ User exists in auth but no profile found, creating profile...");
-              
-              // Buat profile untuk user yang sudah ada di auth
-              try {
-                // Get the user from auth to get the ID
-                const { data: authUser, error: signInError } = await supabase.auth.signInWithPassword({
-                  email: email.trim().toLowerCase(),
-                  password: password.trim(),
-                });
-
-                if (signInError) {
-                  console.error("❌ Error signing in to create profile:", signInError);
-                  if (signInError.code === '406' || signInError.status === 406) {
-                    throw new Error("Server tidak dapat memproses login. Silakan coba lagi.");
-                  }
-                  throw new Error("Gagal memverifikasi user. Password mungkin salah.");
-                }
-
-                if (authUser.user) {
-                  const { data: newProfile, error: createError } = await supabase
-                    .from("profiles")
-                    .insert([
-                      {
-                        id: authUser.user.id,
-                        email: email.toLowerCase(),
-                        full_name: fullName,
-                        role: HARDCODED_ADMINS.includes(email.toLowerCase()) ? 'admin' : 'user',
-                        created_at: new Date().toISOString()
-                      }
-                    ])
-                    .select()
-                    .single();
-
-                  if (createError) {
-                    console.error("❌ Failed to create profile for existing user:", createError);
-                    if (createError.code === '406' || createError.status === 406) {
-                      throw new Error("Server tidak dapat membuat profile. Silakan coba lagi.");
-                    }
-                    throw new Error("Gagal membuat profile. Silakan hubungi admin.");
-                  }
-
-                  console.log("✅ Profile created for existing user:", newProfile);
-                  
-                  // Sign out setelah membuat profile
-                  await supabase.auth.signOut();
-                  
-                  throw new Error("Profile berhasil dibuat. Silakan login dengan email dan password Anda.");
-                }
-              } catch (signInError) {
-                console.error("❌ Error in profile creation flow:", signInError);
-                throw new Error(signInError.message || "Gagal memproses registrasi. Silakan hubungi admin.");
-              }
-            }
-          } catch (profileCheckError) {
-            console.error("❌ Error in profile check:", profileCheckError);
-            throw new Error(profileCheckError.message || "Terjadi kesalahan. Silakan coba lagi atau hubungi admin.");
-          }
-        } else {
-          // Handle other auth errors
-          if (error.code === '406' || error.status === 406) {
-            throw new Error("Server tidak dapat memproses request. Silakan refresh halaman dan coba lagi.");
-          }
-          console.error("❌ Register error:", error);
-          throw new Error(error.message || "Registrasi gagal. Silakan coba lagi.");
-        }
-      }
-
-      // Auto-create profile untuk user baru
-      if (data.user) {
-        try {
-          console.log("🔍 Creating profile for new user:", {
-            id: data.user.id,
-            email: email.toLowerCase(),
-            full_name: fullName,
-            role: HARDCODED_ADMINS.includes(email.toLowerCase()) ? 'admin' : 'user'
-          });
-
-          const { data: profileData, error: profileError } = await supabase
-            .from("profiles")
-            .insert([
-              {
-                id: data.user.id,
-                email: email.toLowerCase(),
-                full_name: fullName,
-                role: HARDCODED_ADMINS.includes(email.toLowerCase()) ? 'admin' : 'user',
-                created_at: new Date().toISOString()
-              }
-            ])
-            .select()
-            .single();
-
-          if (profileError) {
-            console.error("❌ Profile creation failed:", profileError);
-            if (profileError.code === '406' || profileError.status === 406) {
-              throw new Error("Server tidak dapat membuat profile. User terdaftar tapi profile gagal dibuat. Silakan hubungi admin.");
-            }
-            throw profileError;
-          }
-
-          console.log("✅ Profile created successfully:", profileData);
-        } catch (profileError) {
-          console.error("❌ Profile creation error:", profileError);
-          // Jangan throw error di sini agar registrasi tetap berhasil
-          // User bisa dibuat manual oleh admin jika perlu
-          console.warn("⚠️ User registered but profile creation failed. Admin may need to create profile manually.");
-        }
-      }
-
-      console.log("✅ Register successful for:", email);
-      return data;
-      
-    } catch (err) {
-      console.error("❌ Register catch error:", err);
-      throw err;
-    }
-  };
-
-  // ======================
-  // LOGOUT - Instant logout
-  // ======================
-  const logout = () => {
-    console.log("🚪 Instant logout for user:", user?.email);
-    
-    // 1. Clear user state immediately
-    setUser(null);
-    
-    // 2. Supabase logout in background (don't wait)
-    supabase.auth.signOut().catch(error => {
-      console.error("❌ Background logout error:", error);
-    });
-    
-    console.log("✅ Instant logout successful");
-  };
-
-  // ======================
-  // HAS PERMISSION FUNCTION
-  // ======================
-  const hasPermission = useCallback((permission) => {
-    if (!user) return false;
-    return user.permissions?.includes(permission);
-  }, [user]);
-
-  // ======================
-  // UPDATE PROFILE
-  // ======================
-  const updateProfile = async (updates) => {
-    if (!user) throw new Error("No user logged in");
-    
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update(updates)
-        .eq("id", user.id);
-
-      if (error) throw error;
-
-      // Update user state
-      setUser(prev => ({ ...prev, ...updates }));
-      
-      console.log("✅ Profile updated successfully");
-      return { success: true };
-      
-    } catch (error) {
-      console.error("❌ Error updating profile:", error);
-      return { success: false, error };
-    }
-  };
-
-  // ======================
-  // INIT SESSION (FIXED - NO INFINITE LOOP)
-  // ======================
-  useEffect(() => {
-    // Prevent multiple initializations
-    if (initializedRef.current) {
-      console.log("⏩ Auth already initialized, skipping");
-      return;
-    }
-
-    console.log("🚀 Initializing auth...");
-    
-    const initializeAuth = async () => {
-      try {
-        // Get current session
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error("❌ Session error:", sessionError);
-          setLoading(false);
-          return;
-        }
-
-        console.log("📋 Session check:", {
-          hasSession: !!sessionData.session,
-          userEmail: sessionData.session?.user?.email
-        });
-
-        if (sessionData.session?.user) {
-          await buildUser(sessionData.session.user);
-        } else {
-          console.log("👤 No user in session");
-          setUser(null);
-        }
-        
-      } catch (err) {
-        console.error("❌ Error initializing auth:", err);
-        setUser(null);
-      } finally {
-        setLoading(false);
-        initializedRef.current = true;
-        console.log("✅ Auth initialization complete");
-      }
-    };
-
-    initializeAuth();
-
-    // Setup auth state change listener (ONLY ONCE)
-    if (!authListenerRef.current) {
-      console.log("🎧 Setting up auth state listener");
-      
-      const { data: listener } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          console.log("🔄 Auth state change:", event, session?.user?.email);
-          
-          // Only process significant events
-          if (event === 'SIGNED_IN' || event === 'SIGNED_OUT' || event === 'USER_UPDATED') {
-            if (session?.user) {
-              await buildUser(session.user);
-            } else {
-              console.log("👋 User signed out");
-              setUser(null);
-            }
-          } else {
-            console.log("⏭️  Skipping event:", event);
-          }
-        }
-      );
-      
-      authListenerRef.current = listener;
-    }
-
-    // Cleanup
-    return () => {
-      console.log("🧹 Cleaning up auth listener");
-      if (authListenerRef.current) {
-        authListenerRef.current.subscription.unsubscribe();
-        authListenerRef.current = null;
-      }
-    };
-  }, [buildUser]); // Only depends on buildUser which is memoized
-
-  // ======================
-  // PROVIDER VALUE (Memoized)
-  // ======================
-  const providerValue = {
-    user,
-    loading,
-    login,
-    loginWithGoogle,
-    register,
-    logout,
-    hasPermission,
-    updateProfile
-  };
-
-  console.log("🎯 AuthProvider render, loading:", loading, "user:", user?.email);
-
-  return (
-    <AuthContext.Provider value={providerValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  } catch (err) {
+    console.error("Fetch role error:", err)
+    setRole("user")
+  }
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  useEffect(() => {
+    // 1️⃣ INIT AUTH (cepat)
+    const initAuth = async () => {
+      setLoading(true)
+
+      const { data: { user } } = await supabase.auth.getUser()
+      setUser(user)
+      setLoading(false)
+
+      if (user) {
+        fetchRole(user.id)
+      } else {
+        setRole(null)
+      }
+    }
+
+    initAuth()
+
+    // 2️⃣ LISTEN LOGIN / LOGOUT
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user ?? null
+      setUser(currentUser)
+
+      if (currentUser) {
+        fetchRole(currentUser.id)
+      } else {
+        setRole(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const login = async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+    if (error) throw error
   }
-  return context;
+
+  const logout = async () => {
+    await supabase.auth.signOut()
+    setUser(null)
+    setRole(null)
+  }
+
+  const register = async (email, password, fullName) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        }
+      }
+    })
+    if (error) throw error
+  }
+
+  
+  return (
+    <AuthContext.Provider value={{ user, role, loading, login, logout, register }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export const useAuth = () => {
+  const ctx = useContext(AuthContext)
+  if (!ctx) {
+    throw new Error("useAuth must be used inside AuthProvider")
+  }
+  return ctx
 }

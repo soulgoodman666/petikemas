@@ -1,105 +1,103 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import MainLayout from '../components/layout/Layout';
+// src/AppRoutes.jsx
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
+import ProtectedRoute from '../components/ProtectedRoute'
+import ErrorBoundary from '../components/ErrorBoundary'
+import RoleRedirect from "../components/RoleRedirect"
 
-import Login from '../pages/sidebar/Login';
-import Profile from '../pages/sidebar/Profile';
+
+// Lazy loading untuk performance optimization
+const Login = lazy(() => import('../pages/sidebar/Login'))
+const Profile = lazy(() => import('../pages/sidebar/Profile'))
+const Layout = lazy(() => import('../components/layout/Layout'));// Import Layout
 
 // Admin pages
-import Upload from '../pages/sidebar/Upload';
-import FilesPage from '../pages/sidebar/FilesPage';
-import Users from '../pages/sidebar/Users';
-import AnnouncementManagement from '../pages/sidebar/AnnouncementManagement';
+const Upload = lazy(() => import('../pages/sidebar/Upload'))
+const FilesPage = lazy(() => import('../pages/sidebar/FilesPage'))
+const Users = lazy(() => import('../pages/sidebar/Users'))
+const AnnouncementManagement = lazy(() => import('../pages/sidebar/AnnouncementManagement'))
 
 // User pages
-import MyFiles from '../pages/sidebar/MyFiles';
+const MyFiles = lazy(() => import('../pages/sidebar/MyFiles'))
 
-// Protected Route Component
-function ProtectedRoute({ children, adminOnly = false }) {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (adminOnly && !user.isAdmin) {
-    return <Navigate to="/my-files" replace />;
-  }
-
-  return children;
-}
+// Loading component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+    </div>
+  </div>
+)
 
 export default function AppRoutes() {
-  const { user } = useAuth();
-
   return (
-    <Routes>
-      {/* PUBLIC ROUTES - TANPA LAYOUT */}
-      <Route path="/login" element={
-        user ? <Navigate to={user.isAdmin ? "/files" : "/my-files"} replace /> : <Login />
-      } />
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
 
-      {/* PROTECTED ROUTES - DENGAN LAYOUT */}
-      <Route element={<MainLayout />}>
-        {/* ROOT REDIRECT */}
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Navigate to={user?.isAdmin ? "/files" : "/my-files"} replace />
-          </ProtectedRoute>
-        } />
+          {/* PUBLIC */}
+          <Route path="/login" element={<Login />} />
 
-        {/* ADMIN ONLY PAGES */}
-        <Route path="/upload" element={
-          <ProtectedRoute adminOnly={true}>
-            <Upload />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/files" element={
-          <ProtectedRoute adminOnly={true}>
-            <FilesPage />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/users" element={
-          <ProtectedRoute adminOnly={true}>
-            <Users />
-          </ProtectedRoute>
-        } />
-        
-        <Route path="/announcements" element={
-          <ProtectedRoute adminOnly={true}>
-            <AnnouncementManagement />
-          </ProtectedRoute>
-        } />
+          {/* PROTECTED WITH LAYOUT */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <Outlet />
+                </Layout>
+              </ProtectedRoute>
+            }
+          >
+            {/* ROOT REDIRECT */}
+            <Route index element={<RoleRedirect />} />
 
-        {/* USER PAGES - ALL AUTHENTICATED USERS */}
-        <Route path="/my-files" element={
-          <ProtectedRoute>
-            <MyFiles />
-          </ProtectedRoute>
-        } />
-        
-        {/* PROFILE - ALL USERS */}
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
-      </Route>
+            {/* ADMIN */}
+            <Route
+              path="files"
+              element={
+                <ProtectedRoute adminOnly>
+                  <FilesPage />
+                </ProtectedRoute>
+              }
+            />
 
-      {/* 404 - REDIRECT BASED ON AUTH */}
-      <Route path="*" element={
-        user ? <Navigate to={user.isAdmin ? "/files" : "/my-files"} replace /> : <Navigate to="/login" replace />
-      } />
-    </Routes>
-  );
+            <Route
+              path="users"
+              element={
+                <ProtectedRoute adminOnly>
+                  <Users />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="upload"
+              element={
+                <ProtectedRoute adminOnly>
+                  <Upload />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="announcements"
+              element={
+                <ProtectedRoute adminOnly>
+                  <AnnouncementManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* USER */}
+            <Route path="my-files" element={<MyFiles />} />
+            <Route path="profile" element={<Profile />} />
+
+
+          </Route>
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
+  )
 }
