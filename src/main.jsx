@@ -15,6 +15,8 @@ window.addEventListener("unhandledrejection", (e) => {
   document.body.innerHTML += `<pre style="color:red">${e.reason}</pre>`;
 });
 
+console.log("SUPABASE URL:", import.meta.env.VITE_SUPABASE_URL)
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter
