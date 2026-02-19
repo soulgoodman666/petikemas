@@ -1,19 +1,4 @@
 {
-  "version": 2,
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "functions": {
-    "src": "*.js"
-  },
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    }
-  ],
   "routes": [
     {
       "src": "/(.*)",
@@ -42,23 +27,10 @@
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        }
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
     }
-  ],
-  "env": {
-    "VITE_ENV": "production"
-  },
-  "nodeVersion": "20.11.1"
+  ]
 }
