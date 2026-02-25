@@ -325,6 +325,7 @@ export default function Users() {
     }
   };
 
+
   // Group messages by date
   const groupMessagesByDate = (messages) => {
     const groups = {};
@@ -356,7 +357,8 @@ export default function Users() {
   // Filter users
   const filteredUsers = users.filter(userItem =>
     userItem.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    userItem.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    userItem.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (userItem.phone_number && userItem.phone_number.includes(searchTerm)) // Tambahkan pencarian berdasarkan nomor telepon
   );
 
   // Realtime subscription for new messages
@@ -464,7 +466,7 @@ export default function Users() {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Cari user..."
+                  placeholder="Cari user berdasarkan nama, email, atau nomor telepon..."
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 />
               </div>
@@ -491,9 +493,11 @@ export default function Users() {
                       <tr className="border-b border-gray-200 dark:border-gray-600">
                         <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">User</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Email</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Phone Number</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Status</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Registered</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Action</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Chat</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -556,6 +560,16 @@ export default function Users() {
                             </div>
                           </td>
                           <td className="py-3 px-4">
+                            {userItem.phone_number ? (
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-4 h-4 text-gray-400" />
+                                <span className="text-gray-600 dark:text-gray-400">{userItem.phone_number}</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-500">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
                             <span className="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                               Active
                             </span>
@@ -566,17 +580,18 @@ export default function Users() {
                             </span>
                           </td>
                           <td className="py-3 px-4">
-                            <div className="flex items-center gap-4">
-                              <span
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleUserClick(userItem);
-                                }}
-                              >
-                                Lihat Files
-                              </span>
-
+                            <span
+                              className="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUserClick(userItem);
+                              }}
+                            >
+                              Lihat Files
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center justify-center">
                               <div
                                 className="relative cursor-pointer group"
                                 onClick={(e) => handleMessagesClick(e, userItem)}
@@ -699,7 +714,7 @@ export default function Users() {
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[85vh] flex flex-col dark:bg-gray-800 transform transition-all animate-slideUp">
 
               {/* Modal Header with Gradient */}
-              <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl p-10 text-white overflow-hidden">
+              <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl p-20 text-white overflow-hidden">
                 {/* Decorative Elements */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-8 -mt-8"></div>
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-8 -mb-8"></div>
@@ -735,12 +750,12 @@ export default function Users() {
                           <Mail className="w-3 h-3" />
                           {selectedUserForMessages.email}
                         </span>
-                        {selectedUserForMessages.phone && (
+                        {selectedUserForMessages.phone_number && (
                           <>
                             <span className="w-1 h-1 bg-blue-300 rounded-full"></span>
                             <span className="flex items-center gap-1">
                               <Phone className="w-3 h-3" />
-                              {selectedUserForMessages.phone}
+                              {selectedUserForMessages.phone_number}
                             </span>
                           </>
                         )}

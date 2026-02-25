@@ -10,6 +10,7 @@ import {
   Building2,
   CheckCircle,
   AlertCircle,
+  Phone,
 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
@@ -21,6 +22,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState(""); // State baru untuk nomor telepon
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isLogin, setIsLogin] = useState(true);
@@ -33,6 +35,13 @@ export default function Login() {
     const isValid = email.toLowerCase().endsWith('@tps.co.id');
     setEmailValid(isValid);
     return isValid;
+  };
+
+  // Validasi nomor telepon (opsional)
+  const validatePhoneNumber = (phone) => {
+    // Hanya angka, minimal 10 digit, maksimal 15 digit
+    const phoneRegex = /^[0-9]{10,15}$/;
+    return phone === "" || phoneRegex.test(phone);
   };
 
   const handleLogin = async (e) => {
@@ -69,7 +78,7 @@ export default function Login() {
     setLocalLoading(true);
 
     if (!email || !password || !fullName) {
-      setError("Semua field harus diisi");
+      setError("Nama lengkap, email, dan password harus diisi");
       setLocalLoading(false);
       return;
     }
@@ -80,8 +89,16 @@ export default function Login() {
       return;
     }
 
+    // Validasi nomor telepon jika diisi
+    if (phoneNumber && !validatePhoneNumber(phoneNumber)) {
+      setError("Nomor telepon harus berisi 10-15 digit angka");
+      setLocalLoading(false);
+      return;
+    }
+
     try {
-      await register(email, password, fullName);
+      // Kirim data registrasi termasuk nomor telepon
+      await register(email, password, fullName, phoneNumber);
       setSuccess("Registrasi berhasil! Silakan login.");
       setTimeout(() => {
         setIsLogin(true);
@@ -89,6 +106,7 @@ export default function Login() {
         setEmail("");
         setPassword("");
         setFullName("");
+        setPhoneNumber(""); // Reset nomor telepon
       }, 2000);
     } catch (err) {
       console.error("Register error:", err);
@@ -103,6 +121,11 @@ export default function Login() {
     setSuccess("");
     setIsLogin(!isLogin);
     setFormMode(isLogin ? 'register' : 'login');
+    // Reset form ketika beralih mode
+    setEmail("");
+    setPassword("");
+    setFullName("");
+    setPhoneNumber("");
   };
 
   const isLoading = localLoading || authLoading;
@@ -112,7 +135,6 @@ export default function Login() {
       navigate("/files", { replace: true });
     }
   }, [user, navigate]);
-
 
   // Effect untuk animasi form transisi
   useEffect(() => {
@@ -322,6 +344,41 @@ export default function Login() {
                         required
                       />
                     </div>
+                  </div>
+
+                  {/* Input Nomor Telepon - Baru Ditambahkan */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Phone Number <span className="text-gray-400 font-normal">(opsional)</span>
+                    </label>
+                    <div className="relative group">
+                      <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 transition-colors group-focus-within:text-blue-500" />
+                      <input
+                        type="tel"
+                        value={phoneNumber}
+                        onChange={(e) => {
+                          // Hanya mengizinkan angka
+                          const value = e.target.value.replace(/[^0-9]/g, '');
+                          setPhoneNumber(value);
+                        }}
+                        className="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white/50"
+                        placeholder="081234567890"
+                        maxLength={15}
+                      />
+                      {phoneNumber && !validatePhoneNumber(phoneNumber) && (
+                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                          <AlertCircle className="w-5 h-5 text-red-500" />
+                        </div>
+                      )}
+                    </div>
+                    {phoneNumber && !validatePhoneNumber(phoneNumber) && (
+                      <p className="mt-2 text-sm text-red-500 animate-fadeIn">
+                        Nomor telepon harus 10-15 digit angka
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-400">
+                      Contoh: 081234567890
+                    </p>
                   </div>
 
                   <div>

@@ -16,6 +16,18 @@
   }
 }
 
-.animate-slide-in {
-  animation: slide-in 0.3s ease-out;
+/* Animasi untuk pesan baru */
+@keyframes slideInNotification {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.notification-slide-in {
+  animation: slideInNotification 0.3s ease-out forwards;
 }

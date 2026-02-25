@@ -42,7 +42,7 @@ export default function Profile() {
       try {
         const { data, error } = await supabase
           .from("profiles")
-          .select("created_at, full_name, email, role, is_admin")
+          .select("created_at, full_name, email, role, is_admin, phone_number") // Tambahkan phone_number
           .eq("id", user.id)
           .single();
 
@@ -53,7 +53,8 @@ export default function Profile() {
             created_at: user.created_at || new Date().toISOString(),
             full_name: user.user_metadata?.full_name || '',
             email: user.email || '',
-            role: user.user_metadata?.role || 'user'
+            role: user.user_metadata?.role || 'user',
+            phone_number: user.user_metadata?.phone_number || '' // Ambil dari metadata
           });
 
           setJoinDate(formatDate(joinDate));
@@ -79,7 +80,8 @@ export default function Profile() {
           created_at: user.created_at || new Date().toISOString(),
           full_name: user.user_metadata?.full_name || '',
           email: user.email || '',
-          role: user.user_metadata?.role || 'user'
+          role: user.user_metadata?.role || 'user',
+          phone_number: user.user_metadata?.phone_number || '' // Ambil dari metadata
         });
         setJoinDate(formatDate(fallbackDate));
 
@@ -326,7 +328,7 @@ export default function Profile() {
       setEditForm({
         full_name: profile?.full_name || user?.user_metadata?.full_name || "",
         email: profile?.email || user?.email || "",
-        phone: user?.user_metadata?.phone || "",
+        phone_number: profile?.phone_number || user?.user_metadata?.phone_number || "", // Tambahkan phone_number
         department: user?.user_metadata?.department || "",
         position: user?.user_metadata?.position || "",
         address: user?.user_metadata?.address || "",
@@ -346,6 +348,7 @@ export default function Profile() {
     setEditForm({
       full_name: profile?.full_name || user?.user_metadata?.full_name || "",
       email: profile?.email || user?.email || "",
+      phone_number: profile?.phone_number || user?.user_metadata?.phone_number || "" // Tambahkan phone_number
     });
   };
 
@@ -354,19 +357,34 @@ export default function Profile() {
 
     setLoading(true);
     try {
+      // Update di tabel profiles
       const { error } = await supabase
         .from("profiles")
         .update({
           full_name: editForm.full_name,
+          phone_number: editForm.phone_number, // Tambahkan update phone_number
           updated_at: new Date().toISOString()
         })
         .eq("id", user.id);
 
       if (error) throw error;
 
+      // Update juga di user metadata (opsional)
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          full_name: editForm.full_name,
+          phone_number: editForm.phone_number
+        }
+      });
+
+      if (updateError) {
+        console.error("Error updating user metadata:", updateError);
+      }
+
       setProfile(prev => ({
         ...prev,
-        full_name: editForm.full_name
+        full_name: editForm.full_name,
+        phone_number: editForm.phone_number
       }));
 
       setMessage({
@@ -715,12 +733,15 @@ export default function Profile() {
                     <div className="space-y-4">
                       <h3 className="font-semibold text-gray-900 text-lg border-b pb-2 dark:text-white dark:border-gray-600">Informasi Kontak</h3>
                       <div className="space-y-3">
-                        {user?.user_metadata?.phone && (
+                        {/* Nomor Telepon - Ditambahkan */}
+                        {(profile?.phone_number || user?.user_metadata?.phone_number) && (
                           <div className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg transition-colors dark:hover:bg-gray-700/50">
                             <Phone className="w-5 h-5 text-gray-400 flex-shrink-0" />
                             <div>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">Telepon</p>
-                              <p className="font-medium text-gray-900 dark:text-white">{user.user_metadata.phone}</p>
+                              <p className="text-sm text-gray-500 dark:text-gray-400">Nomor Telepon</p>
+                              <p className="font-medium text-gray-900 dark:text-white">
+                                {profile?.phone_number || user?.user_metadata?.phone_number}
+                              </p>
                             </div>
                           </div>
                         )}
@@ -812,17 +833,28 @@ export default function Profile() {
                     <div className="space-y-4">
                       <h3 className="font-semibold text-gray-900 text-lg dark:text-white">Edit Informasi Dasar</h3>
 
+                      
+
+                      {/* Input Nomor Telepon di Edit Form */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-300">
-                          Nama Lengkap
+                          Nomor Telepon
                         </label>
                         <input
-                          type="text"
+                          type="tel"
                           className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                          value={editForm.full_name}
-                          onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
-                          placeholder="Masukkan nama lengkap"
+                          value={editForm.phone_number}
+                          onChange={(e) => {
+                            // Hanya mengizinkan angka
+                            const value = e.target.value.replace(/[^0-9]/g, '');
+                            setEditForm({ ...editForm, phone_number: value });
+                          }}
+                          placeholder="081234567890"
+                          maxLength={15}
                         />
+                        <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">
+                          Masukkan nomor telepon (opsional, maksimal 15 digit)
+                        </p>
                       </div>
 
                       <div>
@@ -852,7 +884,7 @@ export default function Profile() {
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[85vh] flex flex-col dark:bg-gray-800 transform transition-all animate-slideUp">
 
             {/* Modal Header with Gradient */}
-            <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl p-10 text-white overflow-hidden">
+            <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl p-20 text-white overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-8 -mt-8"></div>
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-8 -mb-8"></div>
 
@@ -1034,7 +1066,7 @@ export default function Profile() {
         </div>
       )}
 
-      {/* CSS Animations - Tambahkan di file CSS Anda */}
+      {/* CSS Animations */}
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }

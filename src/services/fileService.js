@@ -425,7 +425,7 @@ export const getAllUsers = async () => {
   try {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, email, full_name, created_at")
+      .select("id, email, full_name, created_at ,phone_number")
       .order("full_name", { ascending: true });
 
     if (error) throw error;

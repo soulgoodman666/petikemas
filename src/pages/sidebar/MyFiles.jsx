@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useDarkMode } from "../../context/DarkModeContext";
-import { getMyFiles, getDownloadUrl, getUserById } from "../../services/fileService";
+import { getDownloadUrl } from "../../services/fileService";
 import { supabase } from "../../supabase";
 import {
   FileText,
@@ -20,6 +20,12 @@ import {
   Share2,
   Lock,
   Unlock,
+  Info,
+  Star,
+  LayoutDashboard,
+  ChevronUp,
+  ChevronDown,
+  Navigation,
 } from "lucide-react";
 
 export default function MyFiles() {
@@ -36,6 +42,14 @@ export default function MyFiles() {
   const [refreshing, setRefreshing] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncement, setLoadingAnnouncement] = useState(true);
+
+  // Tutorial states
+  const [showTutorial, setShowTutorial] = useState(() => {
+    // Cek apakah user sudah pernah melihat tutorial
+    return localStorage.getItem('hasSeenTutorial') !== 'true';
+  });
+  
+  const [showDashboardTutorial, setShowDashboardTutorial] = useState(true);
 
   /* ================= AUTH CHECK ================= */
   useEffect(() => {
@@ -69,15 +83,19 @@ export default function MyFiles() {
   };
 
   const filterByTab = (tab, files = allFiles) => {
-    if (tab === "my-files") setDisplayedFiles(files.filter((f) => f.isMine));
-    if (tab === "shared-with-me") setDisplayedFiles(files.filter((f) => f.isShared));
-    if (tab === "public-files") setDisplayedFiles(files.filter((f) => f.isPublic));
+    if (tab === "my-files") {
+      setDisplayedFiles(files.filter((f) => f.isMine));
+    } else if (tab === "shared-with-me") {
+      setDisplayedFiles(files.filter((f) => f.isShared));
+    } else if (tab === "public-files") {
+      setDisplayedFiles(files.filter((f) => f.isPublic));
+    }
   };
 
   /* ================= FETCH FILES ================= */
   const loadFiles = async () => {
     if (!user?.id) return;
-    
+
     try {
       setLoading(true);
       setRefreshing(true);
@@ -98,7 +116,7 @@ export default function MyFiles() {
       // Ambil data profiles untuk setiap uploaded_by
       const filesWithOwner = await Promise.all((filesData || []).map(async (file) => {
         const extension = file.file_path?.split(".").pop()?.toLowerCase() || "";
-        
+
         // Ambil data owner
         let ownerData = { full_name: "Unknown" };
         if (file.uploaded_by) {
@@ -107,7 +125,7 @@ export default function MyFiles() {
             .select("id, full_name")
             .eq("id", file.uploaded_by)
             .single();
-          
+
           if (profile) {
             ownerData = profile;
           }
@@ -121,7 +139,7 @@ export default function MyFiles() {
             .select("full_name, email")
             .eq("id", file.target_user_id)
             .single();
-          
+
           if (profile) {
             targetUserData = profile;
           }
@@ -187,11 +205,13 @@ export default function MyFiles() {
     window.open(getDownloadUrl(file.file_path), "_blank");
   };
 
-  const formatDate = (date) =>
-    new Date(date).toLocaleString("id-ID", {
+  const formatDate = (date) => {
+    if (!date) return "";
+    return new Date(date).toLocaleString("id-ID", {
       dateStyle: "medium",
       timeStyle: "short",
     });
+  };
 
   const formatFileSize = (bytes) => {
     if (!bytes) return '0 KB';
@@ -199,6 +219,11 @@ export default function MyFiles() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const closeTutorial = () => {
+    setShowTutorial(false);
+    localStorage.setItem('hasSeenTutorial', 'true');
   };
 
   // Calculate stats from allFiles
@@ -234,10 +259,117 @@ export default function MyFiles() {
 
   /* ================= RENDER ================= */
   return (
-    <div className="ml-0 md:ml-64 px-4 md:px-6 py-6">
+    <div className="w-full">
+      {/* DASHBOARD TUTORIAL SECTION - Lebar penuh ke kiri */}
+      <div className="mb-6">
+        <div
+          className={`
+            rounded-2xl p-6 shadow-sm
+            ${darkMode ? 'bg-gray-900' : 'bg-white'}
+          `}
+        >
+          {/* TUTORIAL HEADER */}
+          <div className="flex items-center justify-between mb-6">
+            <h2 className={`text-lg font-semibold flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
+                <LayoutDashboard className="w-5 h-5 text-white" />
+              </div>
+              Tutorial Dashboard
+            </h2>
+            <button
+              onClick={() => setShowDashboardTutorial(!showDashboardTutorial)}
+              className={`p-2 rounded-lg transition-all hover:scale-105
+                ${darkMode
+                  ? 'bg-gray-800 hover:bg-gray-700 text-gray-400'
+                  : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+            >
+              {showDashboardTutorial ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+
+          {/* DASHBOARD TUTORIAL CONTENT */}
+          {showDashboardTutorial && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {/* Quick Stats Tutorial */}
+              <div className={`p-4 rounded-xl border-l-4 border-blue-500 ${darkMode ? 'bg-gray-800/50' : 'bg-blue-50/50'}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-1.5 bg-blue-500/20 rounded-lg">
+                    <Folder className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Total File
+                  </h3>
+                </div>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Adalah Total file yang anda miliki dari gabungan YourFiles dan PublicFiles
+                </p>
+              </div>
+
+              {/* Navigation Tutorial */}
+              <div className={`p-4 rounded-xl border-l-4 border-purple-500 ${darkMode ? 'bg-gray-800/50' : 'bg-purple-50/50'}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-1.5 bg-purple-500/20 rounded-lg">
+                    <Share2 className="w-4 h-4 text-purple-500" />
+                  </div>
+                  <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Your Files
+                  </h3>
+                </div>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Halaman yang menampilkan file yang dikirim langgsung oleh Admin untuk anda pribadi dari request anda pada Admin yang bisa di download.
+                </p>
+              </div>
+
+
+              {/* Download Tutorial */}
+              <div className={`p-4 rounded-xl border-l-4 border-orange-500 ${darkMode ? 'bg-gray-800/50' : 'bg-orange-50/50'}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-1.5 bg-orange-500/20 rounded-lg">
+                    <Globe className="w-4 h-4 text-orange-500" />
+                  </div>
+                  <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Public Files
+                  </h3>
+                </div>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Halaman yang menampilkan file yang dikirim oleh Admin untuk semua user dan bisa didownload
+                </p>
+              </div>
+
+              {/* Announcements Tutorial */}
+              <div className={`p-4 rounded-xl border-l-4 border-yellow-500 ${darkMode ? 'bg-gray-800/50' : 'bg-yellow-50/50'}`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-1.5 bg-yellow-500/20 rounded-lg">
+                    <Megaphone className="w-4 h-4 text-yellow-500" />
+                  </div>
+                  <h3 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Pengumuman
+                  </h3>
+                </div>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Lihat pengumuman dan info terbaru dari Admin . Klik gambar untuk melihat dalam ukuran penuh.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Minimized View */}
+          {!showDashboardTutorial && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
+              <LayoutDashboard className="w-4 h-4 text-blue-500" />
+              <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                Klik untuk melihat panduan dashboard
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* MY FILES CONTENT */}
       <div
         className={`
-          max-w-5xl mx-auto rounded-2xl p-6 shadow-sm
+          rounded-2xl p-6 shadow-sm
           ${darkMode ? 'bg-gray-900' : 'bg-white'}
         `}
       >
@@ -251,20 +383,6 @@ export default function MyFiles() {
               Kelola file Anda dan file yang dibagikan
             </p>
           </div>
-
-          <button
-            onClick={loadFiles}
-            disabled={refreshing}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
-              ${refreshing ? 'opacity-70 cursor-not-allowed' : 'hover:scale-105'}
-              ${darkMode
-                ? 'bg-blue-700 hover:bg-blue-600'
-                : 'bg-blue-600 hover:bg-blue-700'
-              } text-white`}
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            {refreshing ? 'Menyegarkan...' : 'Refresh'}
-          </button>
         </div>
 
         {/* ANNOUNCEMENTS */}
@@ -334,8 +452,6 @@ export default function MyFiles() {
             </div>
           </div>
 
-         
-
           <div className={`p-4 rounded-xl shadow-sm border ${darkMode ? 'bg-gray-800/50 backdrop-blur-sm border-gray-700' : 'bg-white/20 backdrop-blur-sm border-gray-200'}`}>
             <div className="flex items-center justify-between">
               <div>
@@ -351,7 +467,7 @@ export default function MyFiles() {
           <div className={`p-4 rounded-xl shadow-sm border ${darkMode ? 'bg-gray-800/50 backdrop-blur-sm border-gray-700' : 'bg-white/20 backdrop-blur-sm border-gray-200'}`}>
             <div className="flex items-center justify-between">
               <div>
-                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Publik files</p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Public Files</p>
                 <p className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                   {stats.publicFilesCount}
                 </p>
@@ -376,7 +492,7 @@ export default function MyFiles() {
                 }`}
             >
               <Share2 className="w-4 h-4" />
-              For You
+              Your files
               <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === "shared-with-me"
                 ? 'bg-blue-700 text-white'
                 : darkMode
@@ -398,7 +514,7 @@ export default function MyFiles() {
                 }`}
             >
               <Globe className="w-4 h-4" />
-              For all
+              Public Files
               <span className={`px-1.5 py-0.5 rounded-full text-xs ${activeTab === "public-files"
                 ? 'bg-blue-700 text-white'
                 : darkMode
@@ -452,13 +568,13 @@ export default function MyFiles() {
           <div className={`text-center py-12 rounded-xl ${darkMode ? 'bg-gray-800/30 backdrop-blur-sm' : 'bg-white/10 backdrop-blur-sm'} border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <FileText className={`w-16 h-16 mx-auto mb-4 ${darkMode ? 'text-gray-600' : 'text-gray-400'}`} />
             <h3 className={`text-lg font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Tidak ada file
+              Klik Your Files atau Public Files untuk melihat file
             </h3>
             <p className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
               {searchTerm
                 ? `Tidak ditemukan file dengan kata kunci "${searchTerm}"`
                 : activeTab === "my-files"
-                  ? "Belum ada file yang diunggah"
+                  ? ""
                   : activeTab === "shared-with-me"
                     ? "Belum ada file yang dibagikan kepada Anda"
                     : "Belum ada file publik"

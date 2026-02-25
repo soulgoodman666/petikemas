@@ -10,30 +10,30 @@ export function AuthProvider({ children }) {
 
   // 🔑 Ambil role user
   // src/context/AuthContext.jsx (tambahkan di fetchRole)
-const fetchRole = async (userId) => {
-  try {
-    console.log("Fetching role for user ID:", userId);
-    
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", userId)
-      .single()
+  const fetchRole = async (userId) => {
+    try {
+      console.log("Fetching role for user ID:", userId);
 
-    console.log("Role data:", data, "Error:", error);
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", userId)
+        .single()
 
-    if (!error && data?.role) {
-      setRole(data.role)
-      console.log("Role set to:", data.role);
-    } else {
+      console.log("Role data:", data, "Error:", error);
+
+      if (!error && data?.role) {
+        setRole(data.role)
+        console.log("Role set to:", data.role);
+      } else {
+        setRole("user")
+        console.log("Default role set to: user");
+      }
+    } catch (err) {
+      console.error("Fetch role error:", err)
       setRole("user")
-      console.log("Default role set to: user");
     }
-  } catch (err) {
-    console.error("Fetch role error:", err)
-    setRole("user")
   }
-}
 
   useEffect(() => {
     // 1️⃣ INIT AUTH (cepat)
@@ -84,20 +84,70 @@ const fetchRole = async (userId) => {
     setRole(null)
   }
 
-  const register = async (email, password, fullName) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
+  const register = async (email, password, fullName, phoneNumber) => {
+    try {
+      // 1. Register user di auth.users
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            phone_number: phoneNumber,
+          }
+        }
+      });
+
+      if (error) {
+        // Kalau email sudah ada → coba login
+        if (error.message.includes("already registered")) {
+          const loginRes = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (loginRes.error) throw loginRes.error;
+
+          const user = loginRes.data.user;
+
+          await supabase.from("profiles").upsert({
+            id: user.id,
+            email: email,
+            full_name: fullName,
+            phone_number: phoneNumber,
+            role: "user"
+          });
+
+          return loginRes.data;
+        }
+
+        throw error;
+      }
+
+      // user baru
+      if (data?.user) {
+        await supabase.from("profiles").upsert({
+          id: data.user.id,
+          email: email,
           full_name: fullName,
+          phone_number: phoneNumber,
+          role: "user"
+        });
+
+        if (profileError) {
+          console.error('Error saving to profiles:', profileError);
+          throw profileError;
         }
       }
-    })
-    if (error) throw error
-  }
 
-  
+      return data;
+    } catch (error) {
+      console.error('Registration error:', error);
+      throw error;
+    }
+  };
+
+
   return (
     <AuthContext.Provider value={{ user, role, loading, login, logout, register }}>
       {children}
