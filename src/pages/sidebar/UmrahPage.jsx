@@ -43,13 +43,13 @@ export default function UmrahPage() {
 
     const fetchData = async (showRefreshing = false) => {
         if (showRefreshing) setRefreshing(true);
-        
+
         const url = sheetUrl + "&t=" + new Date().getTime();
 
         try {
             const res = await fetch(url, { cache: "no-store" });
             const csvText = await res.text();
-            
+
             const result = Papa.parse(csvText, {
                 header: true,
                 skipEmptyLines: true,
@@ -66,7 +66,7 @@ export default function UmrahPage() {
 
             setData(filteredRows);
             setFilteredData(filteredRows);
-            
+
             // Hitung nilai unik untuk setiap kolom
             if (filteredRows.length > 0) {
                 const uniques = {};
@@ -76,7 +76,7 @@ export default function UmrahPage() {
                 });
                 setUniqueValues(uniques);
             }
-            
+
             setLastUpdated(new Date());
             setLoading(false);
             if (showRefreshing) setRefreshing(false);
@@ -137,7 +137,7 @@ export default function UmrahPage() {
     // Fungsi untuk mendapatkan nilai dari row berdasarkan nama kolom yang diinginkan
     const getValueFromRow = (row, targetColumn) => {
         if (!row) return '-';
-        
+
         const possibleKeys = columnMapping[targetColumn] || [targetColumn];
 
         for (const key of possibleKeys) {
@@ -147,7 +147,7 @@ export default function UmrahPage() {
             );
             if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') {
                 let value = row[foundKey];
-                
+
                 // Untuk nilai akhir, pastikan hanya angka yang ditampilkan
                 if (targetColumn === "nilai akhir") {
                     // Ekstrak hanya angka dari string (misal "85 (Baik)" -> "85")
@@ -156,7 +156,7 @@ export default function UmrahPage() {
                         return numericValue.toString();
                     }
                 }
-                
+
                 return value;
             }
         }
@@ -168,7 +168,7 @@ export default function UmrahPage() {
             );
             if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') {
                 let value = row[foundKey];
-                
+
                 // Untuk nilai akhir, pastikan hanya angka yang ditampilkan
                 if (targetColumn === "nilai akhir") {
                     // Ekstrak hanya angka dari string (misal "85 (Baik)" -> "85")
@@ -177,7 +177,7 @@ export default function UmrahPage() {
                         return numericValue.toString();
                     }
                 }
-                
+
                 return value;
             }
         }
@@ -188,7 +188,7 @@ export default function UmrahPage() {
     // Fungsi untuk mendapatkan warna berdasarkan nilai akhir (HANYA ANGKA)
     const getNilaiAkhirColor = (nilaiAkhir) => {
         if (!nilaiAkhir || nilaiAkhir === '-') return "";
-        
+
         const nilai = parseFloat(nilaiAkhir);
         if (isNaN(nilai)) return "";
 
@@ -441,11 +441,10 @@ export default function UmrahPage() {
                         <button
                             onClick={handleManualRefresh}
                             disabled={refreshing}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-                                refreshing 
-                                    ? 'bg-blue-200 text-blue-500 cursor-not-allowed' 
-                                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
-                            }`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${refreshing
+                                ? 'bg-blue-200 text-blue-500 cursor-not-allowed'
+                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
+                                }`}
                         >
                             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                             <span>{refreshing ? 'Menyegarkan...' : 'Refresh'}</span>
@@ -566,22 +565,49 @@ export default function UmrahPage() {
                 {/* Card untuk tabel */}
                 <div className="mt-6 bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-200">
                     {/* Tombol Aksi */}
+                    {/* Tombol Aksi */}
                     <div className="flex justify-between items-center p-4 border-b border-blue-200 bg-gradient-to-r from-blue-50 to-white">
-                        <div className="flex space-x-3">
-                            <button
-                                onClick={handlePrint}
-                                className="px-4 py-2 bg-white text-blue-700 rounded-lg border border-blue-300 hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 text-sm font-medium shadow-sm"
-                            >
-                                <Printer className="w-4 h-4" />
-                                <span>Cetak</span>
-                            </button>
-                            <button
-                                onClick={handleDownloadExcel}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 text-sm font-medium shadow-md"
-                            >
-                                <Download className="w-4 h-4" />
-                                <span>Download Excel</span> 
-                            </button> Jika ingin merubah data , download excel kemudian buka dengan google Sheet maka akan terbarui otomatis datanya 
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <div className="flex space-x-3">
+                                <button
+                                    onClick={handlePrint}
+                                    className="px-4 py-2 bg-white text-blue-700 rounded-lg border border-blue-300 hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 text-sm font-medium shadow-sm"
+                                >
+                                    <Printer className="w-4 h-4" />
+                                    <span>Cetak</span>
+                                </button>
+                                <button
+                                    onClick={handleDownloadExcel}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 text-sm font-medium shadow-md"
+                                >
+                                    <Download className="w-4 h-4" />
+                                    <span>Download Excel</span>
+                                </button>
+                            </div>
+
+                            {/* Info Update Data - Versi Profesional */}
+                            <div className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl px-4 py-2.5 shadow-sm hover:shadow-md transition-all duration-300 group">
+                                <div className="flex-shrink-0 bg-blue-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform duration-300">
+                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-sm">
+                                    <span className="text-blue-700 font-medium">Ingin merubah data?</span>
+                                    <span className="text-gray-600">Edit di Link ini </span>
+                                    <a
+                                        href="https://docs.google.com/spreadsheets/d/1WQOoK-KEvVyzeWYkLMSsBoiGdqAteW-JEfqiHzo9sEk/edit?gid=274840739#gid=274840739"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold hover:underline underline-offset-2 transition-all"
+                                    >
+                                        Google Docs
+                                        <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                        </svg>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Info jumlah data */}
