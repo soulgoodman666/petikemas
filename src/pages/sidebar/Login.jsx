@@ -131,10 +131,14 @@ export default function Login() {
   const isLoading = localLoading || authLoading;
 
   useEffect(() => {
-    if (user) {
+  if (user) {
+    if (user.email === "adminpp1@tps.co.id") {
       navigate("/files", { replace: true });
+    } else {
+      navigate("/my-files", { replace: true });
     }
-  }, [user, navigate]);
+  }
+}, [user, navigate]);
 
   // Effect untuk animasi form transisi
   useEffect(() => {

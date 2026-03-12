@@ -84,7 +84,7 @@ export default function Users() {
   const fetchUnreadPerUser = async () => {
     const { data } = await supabase
       .from("messages")
-      .select("sender_id, id")
+      .select("sender_id, id, created_at")
       .eq("is_read", false)
       .eq("receiver_id", user?.id);
 
@@ -114,6 +114,7 @@ export default function Users() {
       if (error) throw error;
 
       setUserMessagesList(data || []);
+      
     } catch (err) {
       console.error("REAL ERROR:", err);
       setUserMessagesList([]);
@@ -150,6 +151,7 @@ export default function Users() {
 
       // Refresh messages to include the new one
       await fetchUserMessages(selectedUserForMessages.id);
+      
     } catch (err) {
       console.error(err);
       alert("Gagal mengirim pesan");
@@ -200,7 +202,7 @@ export default function Users() {
     setShowMessagesModal(true);
     fetchUserMessages(userItem.id);
 
-    // 🔥 Reset unread count untuk user ini saat modal dibuka
+    // 🔥 Reset unread count untuk user ini saat membuka chat
     setUnreadMap(prev => ({
       ...prev,
       [userItem.id]: 0
@@ -262,15 +264,19 @@ export default function Users() {
           : msg
       )
     );
+    
+    // Update unread map
+    setUnreadMap(prev => ({
+      ...prev,
+      [selectedUserForMessages.id]: 0
+    }));
   };
-
 
   useEffect(() => {
     if (showMessagesModal && selectedUserForMessages?.id) {
       markAdminMessagesAsRead();
     }
   }, [showMessagesModal, selectedUserForMessages?.id]);
-
 
   // Handle click on user row
   const handleUserClick = (userItem) => {
@@ -325,7 +331,6 @@ export default function Users() {
     }
   };
 
-
   // Group messages by date
   const groupMessagesByDate = (messages) => {
     const groups = {};
@@ -358,7 +363,7 @@ export default function Users() {
   const filteredUsers = users.filter(userItem =>
     userItem.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     userItem.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (userItem.phone_number && userItem.phone_number.includes(searchTerm)) // Tambahkan pencarian berdasarkan nomor telepon
+    (userItem.phone_number && userItem.phone_number.includes(searchTerm))
   );
 
   // Realtime subscription for new messages
@@ -379,10 +384,16 @@ export default function Users() {
           console.log("Realtime triggered:", payload);
           const newMessage = payload.new;
 
-          setUnreadMap(prev => ({
-            ...prev,
-            [newMessage.sender_id]: (prev[newMessage.sender_id] || 0) + 1
-          }));
+          // Cek apakah chat sedang terbuka untuk pengirim ini
+          const isChatOpen = showMessagesModal && selectedUserForMessages?.id === newMessage.sender_id;
+          
+          // Jika chat tidak sedang terbuka, tambahkan ke unread map
+          if (!isChatOpen) {
+            setUnreadMap(prev => ({
+              ...prev,
+              [newMessage.sender_id]: (prev[newMessage.sender_id] || 0) + 1
+            }));
+          }
 
           supabase
             .from("profiles")
@@ -408,7 +419,7 @@ export default function Users() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, showMessagesModal, selectedUserForMessages]);
 
   // Real-time subscription for messages in the current chat
   useEffect(() => {
@@ -497,117 +508,147 @@ export default function Users() {
                         <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Status</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Registered</th>
                         <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Action</th>
-                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">Chat</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300">
+                          <div className="flex items-center gap-1">
+                            <MessageCircle className="w-4 h-4" />
+                            <span>Chat</span>
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredUsers.map((userItem) => (
-                        <tr
-                          key={userItem.id}
-                          className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors dark:border-gray-700 dark:hover:bg-gray-700/50"
-                          onClick={() => handleUserClick(userItem)}
-                        >
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className="relative cursor-pointer group"
+                      {filteredUsers.map((userItem) => {
+                        // Cek apakah ada pesan yang belum dibaca
+                        const hasUnreadMessages = unreadMap[userItem.id] > 0;
+                        
+                        return (
+                          <tr
+                            key={userItem.id}
+                            className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors dark:border-gray-700 dark:hover:bg-gray-700/50"
+                            onClick={() => handleUserClick(userItem)}
+                          >
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-3">
+                                <div
+                                  className="relative cursor-pointer group"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (userItem.avatar_url) {
+                                      handleImageClick(userItem.avatar_url, userItem.full_name || 'User');
+                                    }
+                                  }}
+                                >
+                                  {userItem.avatar_url ? (
+                                    <>
+                                      <img
+                                        src={userItem.avatar_url}
+                                        alt={userItem.full_name || 'User'}
+                                        className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-600 group-hover:ring-blue-500 transition-all"
+                                      />
+                                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-full transition-all flex items-center justify-center">
+                                        <Eye className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center dark:bg-gray-700 ring-2 ring-gray-200 dark:ring-gray-600">
+                                      <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900 dark:text-white">
+                                    {userItem.full_name || userItem.email || 'Unknown'}
+                                  </div>
+                                  {userItem.full_name && userItem.email && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                      {userItem.email}
+                                    </div>
+                                  )}
+                                  {userItem.avatar_url && (
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-1">
+                                      <ImageIcon className="w-3 h-3" />
+                                      Klik untuk lihat foto
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2">
+                                <Mail className="w-4 h-4 text-gray-400" />
+                                <span className="text-gray-600 dark:text-gray-400">{userItem.email}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              {userItem.phone_number ? (
+                                <div className="flex items-center gap-2">
+                                  <Phone className="w-4 h-4 text-gray-400" />
+                                  <span className="text-gray-600 dark:text-gray-400">{userItem.phone_number}</span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-500">-</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                Active
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-gray-600 dark:text-gray-400">
+                                {new Date(userItem.created_at).toLocaleDateString('id-ID')}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if (userItem.avatar_url) {
-                                    handleImageClick(userItem.avatar_url, userItem.full_name || 'User');
-                                  }
+                                  handleUserClick(userItem);
                                 }}
                               >
-                                {userItem.avatar_url ? (
-                                  <>
-                                    <img
-                                      src={userItem.avatar_url}
-                                      alt={userItem.full_name || 'User'}
-                                      className="w-10 h-10 rounded-full object-cover ring-2 ring-gray-200 dark:ring-gray-600 group-hover:ring-blue-500 transition-all"
-                                    />
-                                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 rounded-full transition-all flex items-center justify-center">
-                                      <Eye className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center dark:bg-gray-700 ring-2 ring-gray-200 dark:ring-gray-600">
-                                    <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                                Lihat Files
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center justify-center">
+                                <div
+                                  className="relative cursor-pointer group"
+                                  onClick={(e) => handleMessagesClick(e, userItem)}
+                                >
+                                  <div className="relative">
+                                    <MessageCircle className={`w-5 h-5 transition-colors group-hover:scale-110 ${
+                                      hasUnreadMessages 
+                                        ? 'text-blue-600' 
+                                        : 'text-gray-500 hover:text-blue-600'
+                                    }`} />
+                                    
+                                    {/* Indikator pesan belum terbaca dengan tanda MERAH */}
+                                    {hasUnreadMessages && (
+                                      <>
+                                        {/* Lingkaran merah dengan efek pulse */}
+                                        <span className="absolute -top-2 -right-2 flex h-5 w-5">
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                          <span className="relative inline-flex rounded-full h-5 w-5 bg-red-500 text-white text-xs items-center justify-center font-bold">
+                                            {unreadMap[userItem.id] > 9 ? '9+' : unreadMap[userItem.id]}
+                                          </span>
+                                        </span>
+                                        
+                                        {/* Tooltip untuk menunjukkan jumlah pesan */}
+                                        <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                          {unreadMap[userItem.id] > 0 
+                                            ? `${unreadMap[userItem.id]} pesan belum dibaca`
+                                            : 'Pesan baru'}
+                                        </span>
+                                      </>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                              <div>
-                                <div className="font-medium text-gray-900 dark:text-white">
-                                  {userItem.full_name || userItem.email || 'Unknown'}
                                 </div>
-                                {userItem.full_name && userItem.email && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                                    {userItem.email}
-                                  </div>
-                                )}
-                                {userItem.avatar_url && (
-                                  <div className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 mt-1">
-                                    <ImageIcon className="w-3 h-3" />
-                                    Klik untuk lihat foto
-                                  </div>
-                                )}
                               </div>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-4 h-4 text-gray-400" />
-                              <span className="text-gray-600 dark:text-gray-400">{userItem.email}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            {userItem.phone_number ? (
-                              <div className="flex items-center gap-2">
-                                <Phone className="w-4 h-4 text-gray-400" />
-                                <span className="text-gray-600 dark:text-gray-400">{userItem.phone_number}</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400 dark:text-gray-500">-</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className="inline-block px-2 py-1 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                              Active
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className="text-gray-600 dark:text-gray-400">
-                              {new Date(userItem.created_at).toLocaleDateString('id-ID')}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span
-                              className="text-blue-600 hover:text-blue-800 text-sm font-medium cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUserClick(userItem);
-                              }}
-                            >
-                              Lihat Files
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center justify-center">
-                              <div
-                                className="relative cursor-pointer group"
-                                onClick={(e) => handleMessagesClick(e, userItem)}
-                              >
-                                <MessageCircle className="w-5 h-5 text-gray-500 hover:text-blue-600 transition-colors group-hover:scale-110" />
-
-                                {unreadMap[userItem.id] > 0 && (
-                                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full animate-pulse">
-                                    {unreadMap[userItem.id]}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -714,7 +755,7 @@ export default function Users() {
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[85vh] flex flex-col dark:bg-gray-800 transform transition-all animate-slideUp">
 
               {/* Modal Header with Gradient */}
-              <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl p-20 text-white overflow-hidden">
+              <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl p-6 text-white overflow-hidden">
                 {/* Decorative Elements */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-8 -mt-8"></div>
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-8 -mb-8"></div>
@@ -742,7 +783,7 @@ export default function Users() {
                       <h2 className="text-xl font-bold flex items-center gap-2">
                         {selectedUserForMessages.full_name || selectedUserForMessages.email}
                         {selectedUserForMessages.role === 'admin' && (
-                          <Shield className="w-4 h-4 text-yellow-300" />
+                          <ShieldCheck className="w-4 h-4 text-yellow-300" />
                         )}
                       </h2>
                       <div className="flex items-center gap-3 text-sm text-blue-100">

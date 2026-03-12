@@ -17,3 +17,6 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     detectSessionInUrl: true
   }
 })
+
+console.log("URL:", import.meta.env.VITE_SUPABASE_URL)
+console.log("KEY:", import.meta.env.VITE_SUPABASE_ANON_KEY)
