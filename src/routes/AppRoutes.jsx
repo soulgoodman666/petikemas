@@ -1,24 +1,26 @@
 // src/AppRoutes.jsx
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom'
-import { Suspense, lazy } from 'react'
-import ProtectedRoute from '../components/ProtectedRoute'
-import ErrorBoundary from '../components/ErrorBoundary'
-import RoleRedirect from "../components/RoleRedirect"
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Suspense, lazy } from "react";
+import ProtectedRoute from "../components/ProtectedRoute";
+import ErrorBoundary from "../components/ErrorBoundary";
+import RoleRedirect from "../components/RoleRedirect";
 
-
-// Lazy loading untuk performance optimization
-const Login = lazy(() => import('../pages/sidebar/Login'))
-const Profile = lazy(() => import('../pages/sidebar/Profile'))
-const Layout = lazy(() => import('../components/layout/Layout'));// Import Layout
+// Lazy loading
+const Login = lazy(() => import("../pages/sidebar/Login"));
+const Profile = lazy(() => import("../pages/sidebar/Profile"));
+const Layout = lazy(() => import("../components/layout/Layout"));
 
 // Admin pages
-const Upload = lazy(() => import('../pages/sidebar/Upload'))
-const FilesPage = lazy(() => import('../pages/sidebar/FilesPage'))
-const Users = lazy(() => import('../pages/sidebar/Users'))
-const AnnouncementManagement = lazy(() => import('../pages/sidebar/AnnouncementManagement'))
+const Upload = lazy(() => import("../pages/sidebar/Upload"));
+const FilesPage = lazy(() => import("../pages/sidebar/FilesPage"));
+const Users = lazy(() => import("../pages/sidebar/Users"));
+const AnnouncementManagement = lazy(() =>
+  import("../pages/sidebar/AnnouncementManagement")
+);
 
 // User pages
-const MyFiles = lazy(() => import('../pages/sidebar/MyFiles'))
+const MyFiles = lazy(() => import("../pages/sidebar/MyFiles"));
+const UmrahPage = lazy(() => import("../pages/sidebar/UmrahPage"));
 
 // Loading component
 const PageLoader = () => (
@@ -28,7 +30,7 @@ const PageLoader = () => (
       <p className="text-gray-600 dark:text-gray-400">Loading...</p>
     </div>
   </div>
-)
+);
 
 export default function AppRoutes() {
   return (
@@ -94,10 +96,20 @@ export default function AppRoutes() {
             <Route path="my-files" element={<MyFiles />} />
             <Route path="profile" element={<Profile />} />
 
+            {/* UMRAH PAGE (khusus Nasrullah) */}
+            <Route
+              path="umrah"
+              element={
+                <ProtectedRoute emailOnly="mochamadnasrullah@tps.co.id">
+                  <UmrahPage />
+                </ProtectedRoute>
+              }
+            />
 
           </Route>
+
         </Routes>
       </Suspense>
     </ErrorBoundary>
-  )
+  );
 }

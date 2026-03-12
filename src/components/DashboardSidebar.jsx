@@ -31,19 +31,19 @@ export default function DashboardSidebar({ isOpen, onClose }) {
   const { darkMode, toggleDarkMode } = useDarkMode();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // State untuk notifikasi pesan
   const [unreadCount, setUnreadCount] = useState(0);
   const [adminData, setAdminData] = useState(null);
-  
+
   // State untuk notifikasi admin (pesan dari user ke admin)
   const [adminUnreadCount, setAdminUnreadCount] = useState(0);
   const [usersWithUnread, setUsersWithUnread] = useState([]);
-  
+
   // State untuk menampilkan notifikasi popup
   const [showNotification, setShowNotification] = useState(false);
   const [latestMessage, setLatestMessage] = useState(null);
-  
+
   // State untuk tooltip
   const [hoveredItem, setHoveredItem] = useState(null);
 
@@ -179,7 +179,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
       const { error } = await query;
 
       if (error) throw error;
-      
+
       // Refresh counts
       await fetchAdminUnreadMessages();
       setShowNotification(false);
@@ -201,7 +201,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
         .eq("is_read", false);
 
       if (error) throw error;
-      
+
       setUnreadCount(0);
       setShowNotification(false);
     } catch (err) {
@@ -254,19 +254,19 @@ export default function DashboardSidebar({ isOpen, onClose }) {
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: role === "admin" 
+          filter: role === "admin"
             ? `receiver_id=eq.${user.id}` // Admin menerima pesan
             : `receiver_id=eq.${user.id}` // User menerima pesan
         },
         (payload) => {
           const newMessage = payload.new;
-          
+
           // Only show notification if not on chat page
           if (!isChatPage()) {
             if (role === "admin") {
               // Admin menerima pesan baru dari user - TAMPIL DI SEMUA HALAMAN ADMIN
               setAdminUnreadCount(prev => prev + 1);
-              
+
               // Fetch sender info
               supabase
                 .from("profiles")
@@ -280,26 +280,26 @@ export default function DashboardSidebar({ isOpen, onClose }) {
                     type: 'from_user'
                   });
                   setShowNotification(true);
-                  
+
                   // Auto hide after 5 seconds
                   setTimeout(() => {
                     setShowNotification(false);
                   }, 5000);
                 });
-              
+
               fetchAdminUnreadMessages();
             } else {
               // User menerima pesan baru dari admin
               if (newMessage.sender_id === adminData?.id) {
                 setUnreadCount(prev => prev + 1);
-                
+
                 setLatestMessage({
                   ...newMessage,
                   senderName: 'Admin',
                   type: 'from_admin'
                 });
                 setShowNotification(true);
-                
+
                 setTimeout(() => {
                   setShowNotification(false);
                 }, 5000);
@@ -333,8 +333,8 @@ export default function DashboardSidebar({ isOpen, onClose }) {
           event: "UPDATE",
           schema: "public",
           table: "messages",
-          filter: role === "admin" 
-            ? `receiver_id=eq.${user.id}` 
+          filter: role === "admin"
+            ? `receiver_id=eq.${user.id}`
             : `receiver_id=eq.${user.id}`
         },
         (payload) => {
@@ -362,11 +362,18 @@ export default function DashboardSidebar({ isOpen, onClose }) {
 
   const isActive = (path) => location.pathname === path;
 
-  // Menu khusus untuk ADMIN saja dengan notifikasi
+  //menu umrah//
+  {
+    user.role === "umrah_admin" && (
+      <Link to="/umrah">Data Umrah</Link>
+    )
+  }
+
+  // Menu khusus untuk Admin
   const adminMenu = [
-    { 
-      label: 'Files Management', 
-      icon: FileText, 
+    {
+      label: 'Files Management',
+      icon: FileText,
       path: '/files',
       description: 'Kelola semua file yang diupload oleh user',
       features: [
@@ -377,9 +384,9 @@ export default function DashboardSidebar({ isOpen, onClose }) {
       ],
       color: 'blue'
     },
-    { 
-      label: 'Upload Files', 
-      icon: Upload, 
+    {
+      label: 'Upload Files',
+      icon: Upload,
       path: '/upload',
       description: 'Upload file baru untuk dibagikan ke user',
       features: [
@@ -390,9 +397,9 @@ export default function DashboardSidebar({ isOpen, onClose }) {
       ],
       color: 'indigo'
     },
-    { 
-      label: 'User Management', 
-      icon: Users, 
+    {
+      label: 'User Management',
+      icon: Users,
       path: '/users',
       description: 'Kelola semua user dan lihat pesan masuk dari mereka',
       features: [
@@ -405,9 +412,9 @@ export default function DashboardSidebar({ isOpen, onClose }) {
       showNotification: true,
       notificationCount: adminUnreadCount
     },
-    { 
-      label: 'Announcements', 
-      icon: Megaphone, 
+    {
+      label: 'Announcements',
+      icon: Megaphone,
       path: '/announcements',
       description: 'Buat dan kelola pengumuman untuk semua user',
       features: [
@@ -421,9 +428,9 @@ export default function DashboardSidebar({ isOpen, onClose }) {
 
   // Menu khusus untuk USER saja
   const userMenu = [
-    { 
-      label: 'My Files', 
-      icon: Folder, 
+    {
+      label: 'My Files',
+      icon: Folder,
       path: '/my-files',
       description: 'Kelola file pribadi dan file yang dibagikan oleh Admin',
       features: [
@@ -434,9 +441,24 @@ export default function DashboardSidebar({ isOpen, onClose }) {
       ],
       color: 'blue'
     },
-    { 
-      label: 'My Profile', 
-      icon: User, 
+
+    // ✅ TAMBAHKAN INI
+    ...(role === "umrah_admin" ? [{
+      label: 'Umrah',
+      icon: BookOpen,
+      path: '/umrah',
+      description: 'Kelola dan lihat data Umrah khusus',
+      features: [
+        'Lihat data jamaah',
+        'Data pegwai',
+        'Seleksi data pegawai'
+      ],
+      color: 'orange'
+    }] : []),
+
+    {
+      label: 'My Profile',
+      icon: User,
       path: '/profile',
       description: 'Kelola informasi profil anda dan Chat admin',
       features: [
@@ -473,7 +495,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
   // Handle click pada notifikasi popup
   const handleNotificationClick = () => {
     setShowNotification(false);
-    
+
     if (role === "admin") {
       navigate('/users');
       if (latestMessage) {
@@ -490,7 +512,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
     if (!showNotification || !latestMessage) return null;
 
     const isFromAdmin = latestMessage.type === 'from_admin';
-    const bgColor = isFromAdmin 
+    const bgColor = isFromAdmin
       ? darkMode ? 'bg-blue-900' : 'bg-blue-50'
       : darkMode ? 'bg-purple-900' : 'bg-purple-50';
     const borderColor = isFromAdmin
@@ -599,10 +621,10 @@ export default function DashboardSidebar({ isOpen, onClose }) {
     const colorScheme = colors[item.color] || colors.blue;
 
     return (
-      <div 
+      <div
         className={`fixed z-[100] w-80 rounded-xl shadow-2xl border overflow-hidden
           ${colorScheme.bg} ${colorScheme.border} ${colorScheme.shadow}`}
-        style={{ 
+        style={{
           left: '260px',
           top: hoveredItem?.position?.top || '50%',
           transform: 'translateY(-50%)',
@@ -622,12 +644,12 @@ export default function DashboardSidebar({ isOpen, onClose }) {
             </span>
           </div>
         </div>
-        
+
         <div className="p-4">
           <p className={`text-xs mb-3 leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
             {item.description}
           </p>
-          
+
           <div className="space-y-2">
             <p className={`text-[10px] font-semibold uppercase tracking-wider ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
               ✨ Fitur Utama:
@@ -725,7 +747,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
         >
           ✕
         </button>
-        
+
         {/* Header */}
         <div className={`p-6 border-b transition-colors duration-300
           ${darkMode ? 'border-slate-700/50' : 'border-gray-200/70'}`}
@@ -776,7 +798,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
                   {role === "admin" ? 'Administrator' : 'User Account'}
                 </span>
               </div>
-              
+
               {/* Global notification badge di user info - TAMPIL DI SEMUA HALAMAN */}
               {(role === "admin" ? adminUnreadCount > 0 : unreadCount > 0) && (
                 <div className="relative">
@@ -787,7 +809,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
                 </div>
               )}
             </div>
-            
+
             <div className="flex items-center gap-2 mt-1">
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
                 ${darkMode
@@ -809,7 +831,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
             {(role === "admin" ? adminUnreadCount > 0 : unreadCount > 0) && (
               <div className={`mt-2 pt-2 text-[10px] border-t ${darkMode ? 'border-slate-700' : 'border-gray-200'}`}>
                 <span className={darkMode ? 'text-yellow-500' : 'text-orange-600'}>
-                  {role === "admin" 
+                  {role === "admin"
                     ? `${adminUnreadCount} pesan belum dibaca dari ${usersWithUnread.length} user`
                     : `${unreadCount} pesan baru dari admin`
                   }
@@ -846,7 +868,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
                 const Icon = item.icon;
                 const hasTooltip = item.description;
                 const showBadge = item.showNotification && item.notificationCount > 0;
-                
+
                 return (
                   <div key={item.path} className="relative">
                     <Link
@@ -876,7 +898,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
                       <Icon size={18} className={`transition-transform duration-200 group-hover:scale-110 ${isActive(item.path) ? 'text-white' : ''
                         }`} />
                       <span className="font-medium text-sm">{item.label}</span>
-                      
+
                       {/* NOTIFIKASI BADGE - HILANG OTOMATIS SETELAH DIBACA */}
                       {showBadge && (
                         <div className="relative ml-auto">
@@ -885,7 +907,7 @@ export default function DashboardSidebar({ isOpen, onClose }) {
                           </span>
                         </div>
                       )}
-                      
+
                       {/* Info icon untuk indikator ada tooltip */}
                       {hasTooltip && !showBadge && !isActive(item.path) && (
                         <div className={`ml-auto p-0.5 rounded-full transition-all

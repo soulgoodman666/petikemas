@@ -2,7 +2,11 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-export default function ProtectedRoute({ children, adminOnly = false }) {
+export default function ProtectedRoute({ 
+  children, 
+  adminOnly = false,
+  allowedRoles = null 
+}) {
   const { user, role, loading } = useAuth();
 
   if (loading) {
@@ -16,12 +20,18 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
     );
   }
 
+  // 🚫 Belum login
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // 🔒 ADMIN ONLY CHECK
+  // 🔒 ADMIN ONLY CHECK (cara lama tetap jalan)
   if (adminOnly && role !== "admin") {
+    return <Navigate to="/" replace />;
+  }
+
+  // 🔐 ROLE BASED CHECK (cara baru)
+  if (allowedRoles && !allowedRoles.includes(role)) {
     return <Navigate to="/" replace />;
   }
 

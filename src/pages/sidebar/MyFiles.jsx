@@ -26,6 +26,9 @@ import {
   ChevronUp,
   ChevronDown,
   Navigation,
+  Trash2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 export default function MyFiles() {
@@ -42,13 +45,20 @@ export default function MyFiles() {
   const [refreshing, setRefreshing] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
   const [loadingAnnouncement, setLoadingAnnouncement] = useState(true);
+  const [deletingFiles, setDeletingFiles] = useState([]);
+
+  // State untuk menyembunyikan/menampilkan pengumuman
+  const [showAnnouncements, setShowAnnouncements] = useState(() => {
+    // Cek localStorage untuk preferensi user
+    const saved = localStorage.getItem('showAnnouncements');
+    return saved !== null ? JSON.parse(saved) : true; // Default true
+  });
 
   // Tutorial states
   const [showTutorial, setShowTutorial] = useState(() => {
-    // Cek apakah user sudah pernah melihat tutorial
     return localStorage.getItem('hasSeenTutorial') !== 'true';
   });
-  
+
   const [showDashboardTutorial, setShowDashboardTutorial] = useState(true);
 
   /* ================= AUTH CHECK ================= */
@@ -92,6 +102,41 @@ export default function MyFiles() {
     }
   };
 
+  /* ================= DELETE FILE FUNCTION ================= */
+  const handleDeleteFile = async (file) => {
+    if (!window.confirm(`Apakah Anda yakin ingin menghapus file "${file.title || 'Tanpa Judul'}"?`)) {
+      return;
+    }
+
+    try {
+      setDeletingFiles(prev => [...prev, file.id]);
+      setError("");
+
+      const { error: storageError } = await supabase.storage
+        .from('files')
+        .remove([file.file_path]);
+
+      if (storageError) throw storageError;
+
+      const { error: dbError } = await supabase
+        .from('files')
+        .delete()
+        .eq('id', file.id);
+
+      if (dbError) throw dbError;
+
+      const updatedAllFiles = allFiles.filter(f => f.id !== file.id);
+      setAllFiles(updatedAllFiles);
+      filterByTab(activeTab, updatedAllFiles);
+
+    } catch (err) {
+      console.error("Error deleting file:", err);
+      setError("Gagal menghapus file. Silakan coba lagi.");
+    } finally {
+      setDeletingFiles(prev => prev.filter(id => id !== file.id));
+    }
+  };
+
   /* ================= FETCH FILES ================= */
   const loadFiles = async () => {
     if (!user?.id) return;
@@ -101,7 +146,6 @@ export default function MyFiles() {
       setRefreshing(true);
       setError("");
 
-      // Ambil data files tanpa join dulu
       const { data: filesData, error: fetchError } = await supabase
         .from("files")
         .select(`
@@ -113,11 +157,9 @@ export default function MyFiles() {
 
       if (fetchError) throw fetchError;
 
-      // Ambil data profiles untuk setiap uploaded_by
       const filesWithOwner = await Promise.all((filesData || []).map(async (file) => {
         const extension = file.file_path?.split(".").pop()?.toLowerCase() || "";
 
-        // Ambil data owner
         let ownerData = { full_name: "Unknown" };
         if (file.uploaded_by) {
           const { data: profile } = await supabase
@@ -131,7 +173,6 @@ export default function MyFiles() {
           }
         }
 
-        // Ambil data target user jika ada
         let targetUserData = null;
         if (file.target_user_id) {
           const { data: profile } = await supabase
@@ -188,6 +229,13 @@ export default function MyFiles() {
     }
   };
 
+  // Fungsi untuk toggle tampilan pengumuman
+  const toggleAnnouncements = () => {
+    const newValue = !showAnnouncements;
+    setShowAnnouncements(newValue);
+    localStorage.setItem('showAnnouncements', JSON.stringify(newValue));
+  };
+
   /* ================= EFFECTS ================= */
   useEffect(() => {
     if (!authLoading && user?.id) {
@@ -199,6 +247,65 @@ export default function MyFiles() {
   useEffect(() => {
     filterByTab(activeTab);
   }, [activeTab, allFiles]);
+
+  // Setup realtime subscription
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const subscription = supabase
+      .channel('files-changes-user')
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'files'
+        },
+        (payload) => {
+          console.log('File deleted (user view):', payload);
+          setAllFiles(prevFiles => {
+            const updatedFiles = prevFiles.filter(file => file.id !== payload.old.id);
+            filterByTab(activeTab, updatedFiles);
+            return updatedFiles;
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'files'
+        },
+        (payload) => {
+          console.log('File inserted (user view):', payload);
+          loadFiles();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'files'
+        },
+        (payload) => {
+          console.log('File updated (user view):', payload);
+          setAllFiles(prevFiles => {
+            const updatedFiles = prevFiles.map(file =>
+              file.id === payload.new.id ? { ...file, ...payload.new } : file
+            );
+            filterByTab(activeTab, updatedFiles);
+            return updatedFiles;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user?.id, activeTab]);
 
   /* ================= HELPERS ================= */
   const handleDownload = (file) => {
@@ -226,7 +333,6 @@ export default function MyFiles() {
     localStorage.setItem('hasSeenTutorial', 'true');
   };
 
-  // Calculate stats from allFiles
   const stats = {
     totalFiles: allFiles.length,
     myFilesCount: allFiles.filter(f => f.isMine).length,
@@ -250,7 +356,7 @@ export default function MyFiles() {
         return darkMode
           ? "border-yellow-500 bg-yellow-900/20"
           : "border-yellow-400 bg-yellow-50";
-      default: // general
+      default:
         return darkMode
           ? "border-blue-500 bg-blue-900/20"
           : "border-blue-400 bg-blue-50";
@@ -260,7 +366,7 @@ export default function MyFiles() {
   /* ================= RENDER ================= */
   return (
     <div className="w-full">
-      {/* DASHBOARD TUTORIAL SECTION - Lebar penuh ke kiri */}
+      {/* DASHBOARD TUTORIAL SECTION */}
       <div className="mb-6">
         <div
           className={`
@@ -268,7 +374,6 @@ export default function MyFiles() {
             ${darkMode ? 'bg-gray-900' : 'bg-white'}
           `}
         >
-          {/* TUTORIAL HEADER */}
           <div className="flex items-center justify-between mb-6">
             <h2 className={`text-lg font-semibold flex items-center gap-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
               <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
@@ -288,10 +393,8 @@ export default function MyFiles() {
             </button>
           </div>
 
-          {/* DASHBOARD TUTORIAL CONTENT */}
           {showDashboardTutorial && (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-              {/* Quick Stats Tutorial */}
               <div className={`p-4 rounded-xl border-l-4 border-blue-500 ${darkMode ? 'bg-gray-800/50' : 'bg-blue-50/50'}`}>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-1.5 bg-blue-500/20 rounded-lg">
@@ -306,7 +409,6 @@ export default function MyFiles() {
                 </p>
               </div>
 
-              {/* Navigation Tutorial */}
               <div className={`p-4 rounded-xl border-l-4 border-purple-500 ${darkMode ? 'bg-gray-800/50' : 'bg-purple-50/50'}`}>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-1.5 bg-purple-500/20 rounded-lg">
@@ -321,8 +423,6 @@ export default function MyFiles() {
                 </p>
               </div>
 
-
-              {/* Download Tutorial */}
               <div className={`p-4 rounded-xl border-l-4 border-orange-500 ${darkMode ? 'bg-gray-800/50' : 'bg-orange-50/50'}`}>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-1.5 bg-orange-500/20 rounded-lg">
@@ -337,7 +437,6 @@ export default function MyFiles() {
                 </p>
               </div>
 
-              {/* Announcements Tutorial */}
               <div className={`p-4 rounded-xl border-l-4 border-yellow-500 ${darkMode ? 'bg-gray-800/50' : 'bg-yellow-50/50'}`}>
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-1.5 bg-yellow-500/20 rounded-lg">
@@ -348,13 +447,12 @@ export default function MyFiles() {
                   </h3>
                 </div>
                 <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Lihat pengumuman dan info terbaru dari Admin . Klik gambar untuk melihat dalam ukuran penuh.
+                  Lihat pengumuman dan info terbaru dari Admin. Klik gambar untuk melihat dalam ukuran penuh.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Minimized View */}
           {!showDashboardTutorial && (
             <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-100 dark:bg-gray-800">
               <LayoutDashboard className="w-4 h-4 text-blue-500" />
@@ -385,48 +483,101 @@ export default function MyFiles() {
           </div>
         </div>
 
-        {/* ANNOUNCEMENTS */}
+        {/* ANNOUNCEMENTS SECTION */}
         {!loadingAnnouncement && announcements.length > 0 && (
-          <div className="mb-6 space-y-6">
-            {announcements.map((announcement) => (
-              <div
-                key={announcement.id}
-                className={`rounded-xl border overflow-hidden shadow-sm transition hover:shadow-md ${getTypeStyle(announcement.type, darkMode)}`}
+          <div className="mb-6">
+            {/* Toggle Button */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Megaphone className={`w-5 h-5 ${darkMode ? 'text-yellow-400' : 'text-yellow-600'}`} />
+                <h2 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Pengumuman
+                </h2>
+                <span className={`px-2 py-0.5 text-xs rounded-full ${
+                  darkMode 
+                    ? 'bg-gray-700 text-gray-300' 
+                    : 'bg-gray-100 text-gray-700'
+                }`}>
+                  {announcements.length}
+                </span>
+              </div>
+              <button
+                onClick={toggleAnnouncements}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all hover:scale-105
+                  ${darkMode 
+                    ? 'bg-gray-800 hover:bg-gray-700 text-gray-300' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  }`}
+                title={showAnnouncements ? "Sembunyikan pengumuman" : "Tampilkan pengumuman"}
               >
-                {/* IMAGE */}
-                {announcement.image_url && (
-                  <div className="w-full max-h-64 overflow-hidden">
-                    <img
-                      src={announcement.image_url}
-                      alt={announcement.title}
-                      className="w-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
-                      onClick={() => window.open(announcement.image_url, "_blank")}
-                    />
-                  </div>
+                {showAnnouncements ? (
+                  <>
+                    <EyeOff className="w-4 h-4" />
+                    <span className="text-sm hidden sm:inline">Sembunyikan</span>
+                  </>
+                ) : (
+                  <>
+                    <Eye className="w-4 h-4" />
+                    <span className="text-sm hidden sm:inline">Tampilkan</span>
+                  </>
                 )}
+              </button>
+            </div>
 
-                {/* CONTENT */}
-                <div className="p-5">
-                  <div className="flex items-start gap-3">
-                    <Megaphone className="w-5 h-5 text-yellow-500 mt-1" />
+            {/* Announcements Content */}
+            {showAnnouncements && (
+              <div className="space-y-6">
+                {announcements.map((announcement) => (
+                  <div
+                    key={announcement.id}
+                    className={`rounded-xl border overflow-hidden shadow-sm transition hover:shadow-md ${getTypeStyle(announcement.type, darkMode)}`}
+                  >
+                    {announcement.image_url && (
+                      <div className="w-full max-h-64 overflow-hidden">
+                        <img
+                          src={announcement.image_url}
+                          alt={announcement.title}
+                          className="w-full object-cover hover:scale-105 transition-transform duration-500 cursor-pointer"
+                          onClick={() => window.open(announcement.image_url, "_blank")}
+                        />
+                      </div>
+                    )}
 
-                    <div className="flex-1">
-                      <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {announcement.title}
-                      </h3>
+                    <div className="p-5">
+                      <div className="flex items-start gap-3">
+                        <Megaphone className="w-5 h-5 text-yellow-500 mt-1" />
 
-                      <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        {announcement.message}
-                      </p>
+                        <div className="flex-1">
+                          <h3 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {announcement.title}
+                          </h3>
 
-                      <p className="text-xs mt-3 text-gray-400">
-                        {formatDate(announcement.created_at)}
-                      </p>
+                          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {announcement.message}
+                          </p>
+
+                          <p className="text-xs mt-3 text-gray-400">
+                            {formatDate(announcement.created_at)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
+
+            {/* Minimized View */}
+            {!showAnnouncements && (
+              <div className={`p-4 rounded-xl border ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                <div className="flex items-center gap-3">
+                  <Megaphone className={`w-5 h-5 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Pengumuman disembunyikan. Klik tombol "Tampilkan" untuk melihat {announcements.length} pengumuman.
+                  </p>
                 </div>
               </div>
-            ))}
+            )}
           </div>
         )}
 
@@ -479,7 +630,6 @@ export default function MyFiles() {
 
         {/* FILTERS AND SEARCH */}
         <div className={`p-6 rounded-xl border ${darkMode ? 'bg-gray-800/30 border-gray-700' : 'bg-white/20 border-gray-200'} backdrop-blur-sm mb-8`}>
-          {/* TABS */}
           <div className="flex flex-wrap items-center gap-4 mb-6">
             <button
               onClick={() => setActiveTab("shared-with-me")}
@@ -526,7 +676,6 @@ export default function MyFiles() {
             </button>
           </div>
 
-          {/* SEARCH */}
           <div className="relative">
             <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <input
@@ -590,12 +739,30 @@ export default function MyFiles() {
               {filteredFiles.map((file) => (
                 <div
                   key={file.id}
-                  className={`rounded-xl overflow-hidden border transition-all hover:shadow-lg ${darkMode
+                  className={`rounded-xl overflow-hidden border transition-all hover:shadow-lg relative ${darkMode
                     ? 'bg-gray-800/30 backdrop-blur-sm border-gray-700 hover:border-gray-600'
                     : 'bg-white/10 backdrop-blur-sm border-gray-200 hover:border-gray-300'}`}
                 >
+                  {(file.isMine || file.isShared) && (
+                    <button
+                      onClick={() => handleDeleteFile(file)}
+                      disabled={deletingFiles.includes(file.id)}
+                      className={`absolute top-2 right-2 p-2 rounded-lg transition-all z-10
+                        ${darkMode
+                          ? 'bg-red-600/20 text-red-400 hover:bg-red-600/30'
+                          : 'bg-red-100 text-red-600 hover:bg-red-200'
+                        } ${deletingFiles.includes(file.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title="Hapus file"
+                    >
+                      {deletingFiles.includes(file.id) ? (
+                        <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+
                   <div className="p-4">
-                    {/* File Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <div className={`p-3 rounded-lg text-2xl`}>
@@ -606,6 +773,8 @@ export default function MyFiles() {
                             title={file.title || "Tanpa Judul"}>
                             {file.title || "Tanpa Judul"}
                           </h3>
+                          {/* Menampilkan nama file asli */}
+                          
                           <p className={`text-xs uppercase ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             {file.extension}
                           </p>
@@ -620,7 +789,6 @@ export default function MyFiles() {
                       )}
                     </div>
 
-                    {/* File Details */}
                     <div className="space-y-3 mb-4">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-gray-400" />
@@ -644,7 +812,6 @@ export default function MyFiles() {
                       )}
                     </div>
 
-                    {/* Download Button */}
                     <button
                       onClick={() => handleDownload(file)}
                       className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg font-medium transition-all hover:scale-[1.02] ${darkMode
