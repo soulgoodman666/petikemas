@@ -29,6 +29,7 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  FileJson,
 } from "lucide-react";
 
 export default function MyFiles() {
@@ -343,7 +344,8 @@ export default function MyFiles() {
   const filteredFiles = displayedFiles.filter(
     (f) =>
       f.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.owner?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      f.owner?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (f.description && f.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getTypeStyle = (type, darkMode) => {
@@ -681,7 +683,7 @@ export default function MyFiles() {
             <input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cari file atau pemilik..."
+              placeholder="Cari file, pemilik, atau deskripsi..."
               className={`w-full pl-12 pr-4 py-3 rounded-lg border-0 ${darkMode
                 ? 'bg-gray-700/50 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
                 : 'bg-gray-50 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'} focus:outline-none transition-all`}
@@ -774,7 +776,9 @@ export default function MyFiles() {
                             {file.title || "Tanpa Judul"}
                           </h3>
                           {/* Menampilkan nama file asli */}
-                          
+                          <p className={`text-xs truncate max-w-[180px] ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                            {file.file_path?.split('/').pop() || 'Unknown'}
+                          </p>
                           <p className={`text-xs uppercase ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                             {file.extension}
                           </p>
@@ -788,6 +792,23 @@ export default function MyFiles() {
                         <Lock className="w-5 h-5 text-blue-500" title="File Pribadi" />
                       )}
                     </div>
+
+                    {/* DESKRIPSI FILE - TAMBAHAN BARU */}
+                    {file.description && (
+                      <div className="mb-4 p-3 rounded-lg border-l-2 border-blue-500 bg-blue-500/5">
+                        <div className="flex items-start gap-2">
+                          <FileJson className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className={`text-xs font-medium mb-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                              Deskripsi:
+                            </p>
+                            <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              {file.description}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-3 mb-4">
                       <div className="flex items-center gap-2">

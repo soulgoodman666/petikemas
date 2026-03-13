@@ -17,6 +17,7 @@ export default function UmrahPage() {
     // Kolom yang akan ditampilkan di web - DENGAN NILAI AKHIR (hanya angka)
     const displayColumns = [
         "nama",
+        "status", // Kolom status baru (fungsional, supertendent, dll)
         "kj",
         "status usia",
         "masa kerja",
@@ -29,6 +30,7 @@ export default function UmrahPage() {
     // Mapping untuk mencocokkan nama kolom dari CSV (case insensitive)
     const columnMapping = {
         "nama": ["nama", "name", "nama lengkap", "full name"],
+        "status": ["status", "jabatan", "posisi", "role", "fungsional", "supertendent", "pangkat"], // Mapping untuk status
         "kj": ["kj", "kelas jabatan", "kelas jabatan atau kj", "jabatan"],
         "status usia": ["status usia", "usia", "umur", "age"],
         "masa kerja": ["masa kerja", "masa_kerja", "lama kerja", "tahun kerja"],
@@ -43,13 +45,13 @@ export default function UmrahPage() {
 
     const fetchData = async (showRefreshing = false) => {
         if (showRefreshing) setRefreshing(true);
-
+        
         const url = sheetUrl + "&t=" + new Date().getTime();
 
         try {
             const res = await fetch(url, { cache: "no-store" });
             const csvText = await res.text();
-
+            
             const result = Papa.parse(csvText, {
                 header: true,
                 skipEmptyLines: true,
@@ -66,7 +68,7 @@ export default function UmrahPage() {
 
             setData(filteredRows);
             setFilteredData(filteredRows);
-
+            
             // Hitung nilai unik untuk setiap kolom
             if (filteredRows.length > 0) {
                 const uniques = {};
@@ -76,7 +78,7 @@ export default function UmrahPage() {
                 });
                 setUniqueValues(uniques);
             }
-
+            
             setLastUpdated(new Date());
             setLoading(false);
             if (showRefreshing) setRefreshing(false);
@@ -137,7 +139,7 @@ export default function UmrahPage() {
     // Fungsi untuk mendapatkan nilai dari row berdasarkan nama kolom yang diinginkan
     const getValueFromRow = (row, targetColumn) => {
         if (!row) return '-';
-
+        
         const possibleKeys = columnMapping[targetColumn] || [targetColumn];
 
         for (const key of possibleKeys) {
@@ -147,7 +149,7 @@ export default function UmrahPage() {
             );
             if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') {
                 let value = row[foundKey];
-
+                
                 // Untuk nilai akhir, pastikan hanya angka yang ditampilkan
                 if (targetColumn === "nilai akhir") {
                     // Ekstrak hanya angka dari string (misal "85 (Baik)" -> "85")
@@ -156,7 +158,7 @@ export default function UmrahPage() {
                         return numericValue.toString();
                     }
                 }
-
+                
                 return value;
             }
         }
@@ -168,7 +170,7 @@ export default function UmrahPage() {
             );
             if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') {
                 let value = row[foundKey];
-
+                
                 // Untuk nilai akhir, pastikan hanya angka yang ditampilkan
                 if (targetColumn === "nilai akhir") {
                     // Ekstrak hanya angka dari string (misal "85 (Baik)" -> "85")
@@ -177,7 +179,7 @@ export default function UmrahPage() {
                         return numericValue.toString();
                     }
                 }
-
+                
                 return value;
             }
         }
@@ -185,10 +187,31 @@ export default function UmrahPage() {
         return '-';
     };
 
+    // Fungsi untuk mendapatkan warna berdasarkan status
+    const getStatusColor = (status) => {
+        if (!status || status === '-') return "";
+        
+        const statusLower = status.toLowerCase();
+        
+        if (statusLower.includes("fungsional")) {
+            return "bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium";
+        } else if (statusLower.includes("supertendent") || statusLower.includes("superintendent")) {
+            return "bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium";
+        } else if (statusLower.includes("struktural")) {
+            return "bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium";
+        } else if (statusLower.includes("pelaksana")) {
+            return "bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs font-medium";
+        } else if (statusLower.includes("staff") || statusLower.includes("staf")) {
+            return "bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs font-medium";
+        }
+        
+        return "bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs font-medium";
+    };
+
     // Fungsi untuk mendapatkan warna berdasarkan nilai akhir (HANYA ANGKA)
     const getNilaiAkhirColor = (nilaiAkhir) => {
         if (!nilaiAkhir || nilaiAkhir === '-') return "";
-
+        
         const nilai = parseFloat(nilaiAkhir);
         if (isNaN(nilai)) return "";
 
@@ -258,6 +281,17 @@ export default function UmrahPage() {
                         .print-date {
                             float: left;
                         }
+                        .status-badge {
+                            display: inline-block;
+                            padding: 2px 8px;
+                            border-radius: 12px;
+                            font-size: 10px;
+                            font-weight: 500;
+                        }
+                        .status-fungsional { background: #f3e8ff; color: #6b21a8; }
+                        .status-supertendent { background: #dbeafe; color: #1e40af; }
+                        .status-struktural { background: #dcfce7; color: #166534; }
+                        .status-pelaksana { background: #fff3cd; color: #856404; }
                         .nilai-tinggi { color: #059669; font-weight: bold; }
                         .nilai-sedang { color: #d97706; }
                         .nilai-rendah { color: #dc2626; }
@@ -303,6 +337,17 @@ export default function UmrahPage() {
                 }
             }
 
+            // Status styling
+            const status = row['status'] || '-';
+            let statusClass = '';
+            if (status !== '-') {
+                const statusLower = status.toLowerCase();
+                if (statusLower.includes('fungsional')) statusClass = 'status-fungsional';
+                else if (statusLower.includes('supertendent') || statusLower.includes('superintendent')) statusClass = 'status-supertendent';
+                else if (statusLower.includes('struktural')) statusClass = 'status-struktural';
+                else if (statusLower.includes('pelaksana')) statusClass = 'status-pelaksana';
+            }
+
             return `
                                     <tr>
                                         <td style="text-align: center; font-weight: bold;">${index + 1}</td>
@@ -310,6 +355,8 @@ export default function UmrahPage() {
                 const value = row[col] || '-';
                 if (col === 'nilai akhir') {
                     return `<td class="${nilaiClass}">${value}</td>`;
+                } else if (col === 'status') {
+                    return `<td><span class="status-badge ${statusClass}">${value}</span></td>`;
                 }
                 return `<td>${value}</td>`;
             }).join('')}
@@ -329,7 +376,7 @@ export default function UmrahPage() {
         printWindow.print();
     };
 
-    // Fungsi untuk download Excel
+    // Fungsi untuk download Excel tampilan web
     const handleDownloadExcel = () => {
         try {
             // Buat array untuk worksheet
@@ -350,17 +397,18 @@ export default function UmrahPage() {
             // Buat worksheet
             const ws = XLSX.utils.aoa_to_sheet(worksheetData);
 
-            // Atur lebar kolom - NAMA dan PRESENSI ALPHA diperkecil
+            // Atur lebar kolom
             const colWidths = [
                 { wch: 5 },  // No
-                { wch: 18 }, // NAMA - diperkecil dari 25 jadi 18
+                { wch: 18 }, // NAMA
+                { wch: 15 }, // STATUS (baru)
                 { wch: 12 }, // KJ
                 { wch: 12 }, // STATUS USIA
                 { wch: 12 }, // MASA KERJA
                 { wch: 15 }, // SANKSI DISIPLIN
                 { wch: 15 }, // IBADAH KEAGAMAAN
-                { wch: 12 }, // PRESENSI ALPHA - diperkecil dari 18 jadi 12
-                { wch: 15 }  // NILAI AKHIR - diperbesar agar muat
+                { wch: 12 }, // PRESENSI ALPHA
+                { wch: 15 }  // NILAI AKHIR
             ];
             ws['!cols'] = colWidths;
 
@@ -370,7 +418,7 @@ export default function UmrahPage() {
 
             // Generate filename
             const date = new Date();
-            const fileName = `data_umrah_${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}.xlsx`;
+            const fileName = `data_umrah_web_${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}.xlsx`;
 
             // Download file
             XLSX.writeFile(wb, fileName);
@@ -378,6 +426,40 @@ export default function UmrahPage() {
             console.error("Error downloading Excel:", error);
             alert("Gagal mendownload file Excel. Silakan coba lagi.");
         }
+    };
+
+    // Fungsi untuk download Excel asli dari Google Sheets
+    const handleDownloadOriginalExcel = () => {
+        try {
+            // Link download langsung dari Google Sheets
+            const spreadsheetId = "1WQOoK-KEvVyzeWYkLMSsBoiGdqAteW-JEfqiHzo9sEk";
+            const gid = "274840739";
+            
+            const downloadUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx&gid=${gid}`;
+            
+            // Buat link download
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.target = '_blank';
+            link.download = `data_umrah_asli_${new Date().toISOString().slice(0,10)}.xlsx`;
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+        } catch (error) {
+            console.error("Error downloading original Excel:", error);
+            alert("Gagal mendownload file Excel asli. Silakan coba lagi.");
+        }
+    };
+
+    // Fungsi untuk membuka Google Sheets
+    const handleOpenGoogleSheets = () => {
+        const spreadsheetId = "1WQOoK-KEvVyzeWYkLMSsBoiGdqAteW-JEfqiHzo9sEk";
+        const gid = "274840739";
+        const editUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit?gid=${gid}`;
+        window.open(editUrl, '_blank');
     };
 
     // Format waktu terakhir update
@@ -441,10 +523,11 @@ export default function UmrahPage() {
                         <button
                             onClick={handleManualRefresh}
                             disabled={refreshing}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${refreshing
-                                ? 'bg-blue-200 text-blue-500 cursor-not-allowed'
-                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
-                                }`}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                                refreshing 
+                                    ? 'bg-blue-200 text-blue-500 cursor-not-allowed' 
+                                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
+                            }`}
                         >
                             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
                             <span>{refreshing ? 'Menyegarkan...' : 'Refresh'}</span>
@@ -565,53 +648,72 @@ export default function UmrahPage() {
                 {/* Card untuk tabel */}
                 <div className="mt-6 bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-200">
                     {/* Tombol Aksi */}
-                    {/* Tombol Aksi */}
-                    <div className="flex justify-between items-center p-4 border-b border-blue-200 bg-gradient-to-r from-blue-50 to-white">
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                            <div className="flex space-x-3">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border-b border-blue-200 bg-gradient-to-r from-blue-50 to-white gap-3">
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                onClick={handlePrint}
+                                className="px-4 py-2 bg-white text-blue-700 rounded-lg border border-blue-300 hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 text-sm font-medium shadow-sm"
+                            >
+                                <Printer className="w-4 h-4" />
+                                <span>Cetak</span>
+                            </button>
+                            
+                            {/* Dropdown Download */}
+                            <div className="relative group">
                                 <button
-                                    onClick={handlePrint}
-                                    className="px-4 py-2 bg-white text-blue-700 rounded-lg border border-blue-300 hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-2 text-sm font-medium shadow-sm"
-                                >
-                                    <Printer className="w-4 h-4" />
-                                    <span>Cetak</span>
-                                </button>
-                                <button
-                                    onClick={handleDownloadExcel}
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2 text-sm font-medium shadow-md"
                                 >
                                     <Download className="w-4 h-4" />
                                     <span>Download Excel</span>
+                                    <ChevronDown className="w-4 h-4" />
                                 </button>
-                            </div>
-
-                            {/* Info Update Data - Versi Profesional */}
-                            <div className="flex items-center gap-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl px-4 py-2.5 shadow-sm hover:shadow-md transition-all duration-300 group">
-                                <div className="flex-shrink-0 bg-blue-600 p-1.5 rounded-lg group-hover:scale-110 transition-transform duration-300">
-                                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                </div>
-                                <div className="flex items-center gap-1.5 text-sm">
-                                    <span className="text-blue-700 font-medium">Ingin merubah data?</span>
-                                    <span className="text-gray-600">Edit di Link ini </span>
-                                    <a
-                                        href="https://docs.google.com/spreadsheets/d/1WQOoK-KEvVyzeWYkLMSsBoiGdqAteW-JEfqiHzo9sEk/edit?gid=274840739#gid=274840739"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-semibold hover:underline underline-offset-2 transition-all"
+                                
+                                {/* Dropdown Menu */}
+                                <div className="absolute left-0 mt-2 w-64 bg-white rounded-lg shadow-xl border border-blue-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                    <button
+                                        onClick={handleDownloadExcel}
+                                        className="w-full text-left px-4 py-3 hover:bg-blue-50 first:rounded-t-lg flex items-center gap-3 text-sm"
                                     >
-                                        Google Docs
-                                        <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                        </svg>
-                                    </a>
+                                        <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <span className="text-blue-600 text-xs font-bold">Web</span>
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-700">Excel (Tampilan Web)</p>
+                                            <p className="text-xs text-gray-500">Download data sesuai filter</p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={handleDownloadOriginalExcel}
+                                        className="w-full text-left px-4 py-3 hover:bg-blue-50 flex items-center gap-3 text-sm border-t border-blue-100"
+                                    >
+                                        <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                                            <span className="text-green-600 text-xs font-bold">Asli</span>
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-700">Excel (File Asli)</p>
+                                            <p className="text-xs text-gray-500">Download file original Google Sheets</p>
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={handleOpenGoogleSheets}
+                                        className="w-full text-left px-4 py-3 hover:bg-blue-50 last:rounded-b-lg flex items-center gap-3 text-sm border-t border-blue-100"
+                                    >
+                                        <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center">
+                                            <svg className="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-gray-700">Edit langgsung di Google Sheets</p>
+                                            <p className="text-xs text-gray-500">Buka spreadsheet asli untuk diedit</p>
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
                         </div>
 
                         {/* Info jumlah data */}
-                        <div className="text-sm bg-blue-100 px-3 py-1 rounded-full text-blue-700">
+                        <div className="text-sm bg-blue-100 px-3 py-1 rounded-full text-blue-700 whitespace-nowrap">
                             {filteredData.length} dari {data.length} data
                         </div>
                     </div>
@@ -627,11 +729,14 @@ export default function UmrahPage() {
                                     <th scope="col" className="px-4 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider w-36">
                                         NAMA
                                     </th>
+                                    <th scope="col" className="px-4 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider w-24">
+                                        STATUS
+                                    </th>
                                     <th scope="col" className="px-4 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider w-20">
                                         KJ
                                     </th>
                                     <th scope="col" className="px-4 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider w-24">
-                                        STATUS USIA
+                                        USIA
                                     </th>
                                     <th scope="col" className="px-4 py-4 text-left text-xs font-semibold text-white uppercase tracking-wider w-24">
                                         MASA KERJA
@@ -668,7 +773,12 @@ export default function UmrahPage() {
 
                                                 // Styling khusus
                                                 let additionalClass = "";
-                                                if (column === "sanksi disiplin" && value.toLowerCase().includes("ya")) {
+                                                let isBadge = false;
+                                                
+                                                if (column === "status") {
+                                                    isBadge = true;
+                                                    additionalClass = getStatusColor(value);
+                                                } else if (column === "sanksi disiplin" && value.toLowerCase().includes("ya")) {
                                                     additionalClass = "text-red-600 font-semibold";
                                                 } else if (column === "presensi alpha" && !isNaN(parseInt(value)) && parseInt(value) > 5) {
                                                     additionalClass = "text-orange-600 font-semibold";
@@ -680,9 +790,15 @@ export default function UmrahPage() {
 
                                                 return (
                                                     <td key={i} className="px-4 py-4 whitespace-nowrap text-sm">
-                                                        <span className={`${value !== '-' ? 'text-blue-900' : 'text-blue-400 italic'} ${additionalClass}`}>
-                                                            {value}
-                                                        </span>
+                                                        {isBadge ? (
+                                                            <span className={additionalClass}>
+                                                                {value}
+                                                            </span>
+                                                        ) : (
+                                                            <span className={`${value !== '-' ? 'text-blue-900' : 'text-blue-400 italic'} ${additionalClass}`}>
+                                                                {value}
+                                                            </span>
+                                                        )}
                                                     </td>
                                                 );
                                             })}
