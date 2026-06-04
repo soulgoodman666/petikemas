@@ -114,7 +114,7 @@ export default function Users() {
       if (error) throw error;
 
       setUserMessagesList(data || []);
-      
+
     } catch (err) {
       console.error("REAL ERROR:", err);
       setUserMessagesList([]);
@@ -151,7 +151,7 @@ export default function Users() {
 
       // Refresh messages to include the new one
       await fetchUserMessages(selectedUserForMessages.id);
-      
+
     } catch (err) {
       console.error(err);
       alert("Gagal mengirim pesan");
@@ -264,7 +264,7 @@ export default function Users() {
           : msg
       )
     );
-    
+
     // Update unread map
     setUnreadMap(prev => ({
       ...prev,
@@ -386,7 +386,7 @@ export default function Users() {
 
           // Cek apakah chat sedang terbuka untuk pengirim ini
           const isChatOpen = showMessagesModal && selectedUserForMessages?.id === newMessage.sender_id;
-          
+
           // Jika chat tidak sedang terbuka, tambahkan ke unread map
           if (!isChatOpen) {
             setUnreadMap(prev => ({
@@ -445,6 +445,44 @@ export default function Users() {
       supabase.removeChannel(channel);
     };
   }, [showMessagesModal, selectedUserForMessages, user]);
+
+  useEffect(() => {
+    if (!showMessageModal || !user || !adminData) return;
+
+    const channel = supabase
+      .channel("chat-realtime-user")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages"
+        },
+        (payload) => {
+          const msg = payload.new;
+
+          const isCurrentChat =
+            (msg.sender_id === user.id &&
+              msg.receiver_id === adminData.id) ||
+            (msg.sender_id === adminData.id &&
+              msg.receiver_id === user.id);
+
+          if (isCurrentChat) {
+            setMessages(prev => {
+              const exists = prev.some(m => m.id === msg.id);
+              if (exists) return prev;
+
+              return [...prev, msg];
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [showMessageModal, user?.id, adminData?.id]);
 
   return (
     <div className="min-h-screen bg-transparent">
@@ -520,7 +558,7 @@ export default function Users() {
                       {filteredUsers.map((userItem) => {
                         // Cek apakah ada pesan yang belum dibaca
                         const hasUnreadMessages = unreadMap[userItem.id] > 0;
-                        
+
                         return (
                           <tr
                             key={userItem.id}
@@ -617,12 +655,11 @@ export default function Users() {
                                   onClick={(e) => handleMessagesClick(e, userItem)}
                                 >
                                   <div className="relative">
-                                    <MessageCircle className={`w-5 h-5 transition-colors group-hover:scale-110 ${
-                                      hasUnreadMessages 
-                                        ? 'text-blue-600' 
-                                        : 'text-gray-500 hover:text-blue-600'
-                                    }`} />
-                                    
+                                    <MessageCircle className={`w-5 h-5 transition-colors group-hover:scale-110 ${hasUnreadMessages
+                                      ? 'text-blue-600'
+                                      : 'text-gray-500 hover:text-blue-600'
+                                      }`} />
+
                                     {/* Indikator pesan belum terbaca dengan tanda MERAH */}
                                     {hasUnreadMessages && (
                                       <>
@@ -633,10 +670,10 @@ export default function Users() {
                                             {unreadMap[userItem.id] > 9 ? '9+' : unreadMap[userItem.id]}
                                           </span>
                                         </span>
-                                        
+
                                         {/* Tooltip untuk menunjukkan jumlah pesan */}
                                         <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                          {unreadMap[userItem.id] > 0 
+                                          {unreadMap[userItem.id] > 0
                                             ? `${unreadMap[userItem.id]} pesan belum dibaca`
                                             : 'Pesan baru'}
                                         </span>
