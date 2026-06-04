@@ -34,6 +34,7 @@ export default function Profile() {
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+
   // Fetch profile data
   useEffect(() => {
     if (!user) return;
@@ -93,6 +94,52 @@ export default function Profile() {
 
     fetchProfile();
   }, [user]);
+
+  useEffect(() => {
+    if (!showMessageModal || !adminData || !user) return;
+
+    const channel = supabase
+      .channel("chat-realtime-user")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `or(and(sender_id=eq.${user.id},receiver_id=eq.${adminData.id}),and(sender_id=eq.${adminData.id},receiver_id=eq.${user.id}))`
+        },
+        (payload) => {
+
+          setMessages(prev => {
+            const exists = prev.some(msg => msg.id === payload.new.id);
+
+            if (exists) return prev;
+
+            return [...prev, payload.new];
+          });
+
+          if (
+            payload.new.sender_id === adminData.id &&
+            showMessageModal
+          ) {
+            supabase
+              .from("messages")
+              .update({ is_read: true })
+              .eq("id", payload.new.id)
+              .then(() => {
+                setUnreadCount(0);
+              });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [showMessageModal, adminData, user]);
+
+
 
   // Fetch admin data
   useEffect(() => {
@@ -191,8 +238,10 @@ export default function Profile() {
   useEffect(() => {
     if (!user || !adminData) return;
 
+    fetchUnreadCount();
+
     const channel = supabase
-      .channel("user-messages")
+      .channel("user-notification")
       .on(
         "postgres_changes",
         {
@@ -201,42 +250,31 @@ export default function Profile() {
           table: "messages",
           filter: `receiver_id=eq.${user.id}`,
         },
-        (payload) => {
+        async (payload) => {
           const newMessage = payload.new;
 
-          if (newMessage.sender_id === adminData.id) {
+          if (newMessage.sender_id !== adminData.id) return;
+
+          // Chat sedang terbuka?
+          const isChatOpen = showMessageModal;
+
+          if (!isChatOpen) {
             setUnreadCount(prev => prev + 1);
 
-            supabase
+            const { data: senderData } = await supabase
               .from("profiles")
-              .select("full_name, email")
+              .select("full_name,email")
               .eq("id", newMessage.sender_id)
-              .single()
-              .then(({ data: senderData }) => {
-                setPopupMessage({
-                  ...newMessage,
-                  sender: senderData || { full_name: "Admin" }
-                });
-              });
+              .single();
 
-            setTimeout(() => {
-              setPopupMessage(null);
-            }, 5000);
-
-            if (showMessageModal) {
-              setMessages((prev) => [...prev, newMessage]);
-              supabase
-                .from("messages")
-                .update({ is_read: true })
-                .eq("id", newMessage.id)
-                .then();
-            }
+            setPopupMessage({
+              ...newMessage,
+              sender: senderData || { full_name: "Admin" }
+            });
           }
         }
       )
       .subscribe();
-
-    fetchUnreadCount();
 
     return () => {
       supabase.removeChannel(channel);
@@ -393,9 +431,6 @@ export default function Profile() {
       });
       setIsEditing(false);
 
-      setTimeout(() => {
-        setMessage({ type: '', text: '' });
-      }, 3000);
     } catch (error) {
       console.error("Error updating profile:", error);
       setMessage({
@@ -437,9 +472,6 @@ export default function Profile() {
         text: 'Pesan berhasil dikirim'
       });
 
-      setTimeout(() => {
-        setMessage({ type: '', text: '' });
-      }, 3000);
     } catch (err) {
       console.error(err);
       setMessage({
@@ -490,8 +522,12 @@ export default function Profile() {
     return groups;
   };
 
-  const handleOpenChat = () => {
+  const handleOpenChat = async () => {
     setShowMessageModal(true);
+
+    await markMessagesAsRead();
+
+    setPopupMessage(null);
   };
 
   return (
@@ -833,7 +869,7 @@ export default function Profile() {
                     <div className="space-y-4">
                       <h3 className="font-semibold text-gray-900 text-lg dark:text-white">Edit Informasi Dasar</h3>
 
-                      
+
 
                       {/* Input Nomor Telepon di Edit Form */}
                       <div>
@@ -967,8 +1003,8 @@ export default function Profile() {
 
                             <div
                               className={`rounded-2xl p-3 ${msg.sender_id === user.id
-                                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-br-none shadow-lg'
-                                  : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none shadow-md'
+                                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-br-none shadow-lg'
+                                : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none shadow-md'
                                 }`}
                             >
                               <p className="text-sm break-words leading-relaxed">{msg.message}</p>
