@@ -755,7 +755,7 @@ export default function Users() {
 
               {/* Modal Header with Gradient */}
               {/* Header */}
-              <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-t-2xl px-6 py-5 text-white">
+              <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-t-2xl px-6 py-5 text-white overflow-hidden">
 
                 {/* Decoration */}
                 <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
