@@ -114,7 +114,7 @@ export default function Users() {
       if (error) throw error;
 
       setUserMessagesList(data || []);
-      
+
     } catch (err) {
       console.error("REAL ERROR:", err);
       setUserMessagesList([]);
@@ -151,7 +151,7 @@ export default function Users() {
 
       // Refresh messages to include the new one
       await fetchUserMessages(selectedUserForMessages.id);
-      
+
     } catch (err) {
       console.error(err);
       alert("Gagal mengirim pesan");
@@ -264,7 +264,7 @@ export default function Users() {
           : msg
       )
     );
-    
+
     // Update unread map
     setUnreadMap(prev => ({
       ...prev,
@@ -386,7 +386,7 @@ export default function Users() {
 
           // Cek apakah chat sedang terbuka untuk pengirim ini
           const isChatOpen = showMessagesModal && selectedUserForMessages?.id === newMessage.sender_id;
-          
+
           // Jika chat tidak sedang terbuka, tambahkan ke unread map
           if (!isChatOpen) {
             setUnreadMap(prev => ({
@@ -520,7 +520,7 @@ export default function Users() {
                       {filteredUsers.map((userItem) => {
                         // Cek apakah ada pesan yang belum dibaca
                         const hasUnreadMessages = unreadMap[userItem.id] > 0;
-                        
+
                         return (
                           <tr
                             key={userItem.id}
@@ -617,12 +617,11 @@ export default function Users() {
                                   onClick={(e) => handleMessagesClick(e, userItem)}
                                 >
                                   <div className="relative">
-                                    <MessageCircle className={`w-5 h-5 transition-colors group-hover:scale-110 ${
-                                      hasUnreadMessages 
-                                        ? 'text-blue-600' 
+                                    <MessageCircle className={`w-5 h-5 transition-colors group-hover:scale-110 ${hasUnreadMessages
+                                        ? 'text-blue-600'
                                         : 'text-gray-500 hover:text-blue-600'
-                                    }`} />
-                                    
+                                      }`} />
+
                                     {/* Indikator pesan belum terbaca dengan tanda MERAH */}
                                     {hasUnreadMessages && (
                                       <>
@@ -633,10 +632,10 @@ export default function Users() {
                                             {unreadMap[userItem.id] > 9 ? '9+' : unreadMap[userItem.id]}
                                           </span>
                                         </span>
-                                        
+
                                         {/* Tooltip untuk menunjukkan jumlah pesan */}
                                         <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                          {unreadMap[userItem.id] > 0 
+                                          {unreadMap[userItem.id] > 0
                                             ? `${unreadMap[userItem.id]} pesan belum dibaca`
                                             : 'Pesan baru'}
                                         </span>
@@ -755,62 +754,73 @@ export default function Users() {
             <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 max-h-[85vh] flex flex-col dark:bg-gray-800 transform transition-all animate-slideUp">
 
               {/* Modal Header with Gradient */}
-              <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 rounded-t-2xl p-6 text-white overflow-hidden">
-                {/* Decorative Elements */}
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-8 -mt-8"></div>
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/5 rounded-full -ml-8 -mb-8"></div>
+              {/* Header */}
+              <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-t-2xl px-6 py-5 text-white">
 
-                <div className="flex items-center justify-between relative z-10">
+                {/* Decoration */}
+                <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+
+                <div className="relative flex items-center justify-between">
+
+                  {/* User Info */}
                   <div className="flex items-center gap-4">
-                    {/* User Avatar with Status */}
+
                     <div className="relative">
-                      <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30">
+                      <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white/30 bg-white/20 backdrop-blur-sm flex items-center justify-center">
+
                         {selectedUserForMessages.avatar_url ? (
                           <img
                             src={selectedUserForMessages.avatar_url}
                             alt={selectedUserForMessages.full_name}
-                            className="w-full h-full rounded-full object-cover"
+                            className="w-full h-full object-cover"
                           />
                         ) : (
                           <User className="w-7 h-7 text-white" />
                         )}
+
                       </div>
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-800"></div>
+
+                      {/* Online Badge */}
+                      <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                     </div>
 
-                    {/* User Info */}
                     <div>
-                      <h2 className="text-xl font-bold flex items-center gap-2">
-                        {selectedUserForMessages.full_name || selectedUserForMessages.email}
-                        {selectedUserForMessages.role === 'admin' && (
-                          <ShieldCheck className="w-4 h-4 text-yellow-300" />
+                      <div className="flex items-center gap-2">
+
+                        <h2 className="text-lg font-semibold">
+                          {selectedUserForMessages.full_name || "User"}
+                        </h2>
+
+                        {selectedUserForMessages.role === "admin" && (
+                          <span className="px-2 py-0.5 text-xs bg-yellow-400 text-yellow-900 rounded-full font-medium flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3" />
+                            Admin
+                          </span>
                         )}
-                      </h2>
-                      <div className="flex items-center gap-3 text-sm text-blue-100">
-                        <span className="flex items-center gap-1">
-                          <Mail className="w-3 h-3" />
-                          {selectedUserForMessages.email}
-                        </span>
-                        {selectedUserForMessages.phone_number && (
-                          <>
-                            <span className="w-1 h-1 bg-blue-300 rounded-full"></span>
-                            <span className="flex items-center gap-1">
-                              <Phone className="w-3 h-3" />
-                              {selectedUserForMessages.phone_number}
-                            </span>
-                          </>
-                        )}
+
+                      </div>
+
+                      <p className="text-sm text-blue-100">
+                        {selectedUserForMessages.email}
+                      </p>
+
+                      <div className="flex items-center gap-2 mt-1 text-xs text-green-200">
+                        <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                        Online
                       </div>
                     </div>
+
                   </div>
 
                   {/* Close Button */}
                   <button
                     onClick={closeMessagesModal}
-                    className="p-2 hover:bg-white/20 rounded-xl transition-all transform hover:scale-110"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-all duration-200"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5 text-white" />
                   </button>
+
                 </div>
               </div>
 
